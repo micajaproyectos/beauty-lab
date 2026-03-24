@@ -1,26 +1,64 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --cream: #FAF8F5;
+  --blush: #F2E4DF;
+  --rose-soft: #E8C9C1;
+  --rose-mid: #D4A5A0;
+  --mauve: #8B5E6D;
+  --deep-mauve: #5C3A48;
+  --gold: #C9A96E;
+  --gold-light: #E8D5AC;
+  --warm-dark: #2C2329;
+  --warm-muted: #7A6A6E;
+  --warm-light: #B5A8AC;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-cormorant);
+  --font-sans: var(--font-inter);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
+
+/* ── Hero decorative animations ────────────────────────────── */
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-12px); }
+}
+@keyframes hero-float-slow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-18px) rotate(6deg); }
+}
+@keyframes hero-sparkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.8) rotate(0deg); }
+  50%       { opacity: 0.7; transform: scale(1.1) rotate(22deg); }
+}
+@keyframes hero-shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+@keyframes hero-breathe {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50%       { opacity: 0.65; transform: scale(1.04); }
+}
+
+.hero-float        { animation: hero-float      5.5s ease-in-out infinite; }
+.hero-float-slow   { animation: hero-float-slow  7s  ease-in-out infinite; }
+.hero-sparkle      { animation: hero-sparkle    3.2s ease-in-out infinite; }
+.hero-breathe      { animation: hero-breathe    4.5s ease-in-out infinite; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--cream);
+  color: var(--warm-dark);
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-cormorant), Georgia, serif;
+  letter-spacing: -0.01em;
 }
