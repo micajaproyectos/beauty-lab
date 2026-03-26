@@ -19,6 +19,9 @@ export const metadata: Metadata = {
   title: "Beauty Lab — Estética Facial Premium",
   description:
     "Tratamientos de estética facial premium. Ciencia y ritual al servicio de tu piel.",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
