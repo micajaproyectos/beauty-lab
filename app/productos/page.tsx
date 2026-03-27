@@ -321,9 +321,10 @@ interface EditModalProps {
   product: DbProduct;
   onClose: () => void;
   onSave: (updated: DbProduct) => void;
+  onDelete: (id: string) => void;
 }
 
-function EditProductModal({ product, onClose, onSave }: EditModalProps) {
+function EditProductModal({ product, onClose, onSave, onDelete }: EditModalProps) {
   const [nombre, setNombre] = useState(product.nombre);
   const [descripcion, setDescripcion] = useState(product.descripción);
   const [precio, setPrecio] = useState(String(product.precio));
@@ -332,6 +333,7 @@ function EditProductModal({ product, onClose, onSave }: EditModalProps) {
   const [imagen, setImagen] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>(product.imagen_url);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -422,6 +424,31 @@ function EditProductModal({ product, onClose, onSave }: EditModalProps) {
       setError("Ocurrió un error inesperado.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDelete() {
+    setError(null);
+    const adminOk = await checkIsAdmin();
+    if (!adminOk) {
+      setError("No tienes permisos para eliminar este producto.");
+      return;
+    }
+    if (!window.confirm(`¿Eliminar permanentemente «${product.nombre}»? Esta acción no se puede deshacer.`)) return;
+
+    setDeleting(true);
+    try {
+      const { error: delError } = await supabase.from("productos").delete().eq("id", product.id);
+      if (delError) {
+        setError(`Error al eliminar: ${delError.message}`);
+        return;
+      }
+      onDelete(String(product.id));
+    } catch (err) {
+      console.error("[EditModal] Delete error:", err);
+      setError("Ocurrió un error al eliminar.");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -591,27 +618,38 @@ function EditProductModal({ product, onClose, onSave }: EditModalProps) {
         </form>
 
         {/* Footer — fijo */}
-        <div className="flex flex-shrink-0 gap-3 border-t border-[#E8C9C1]/60 px-8 py-5">
+        <div className="flex flex-shrink-0 flex-col gap-3 border-t border-[#E8C9C1]/60 px-8 py-5">
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading || deleting}
+              className="flex-1 rounded-full border border-[#E8C9C1] py-2.5 font-[family-name:var(--font-inter)] text-xs font-medium tracking-widest text-[#7A6A6E] uppercase transition-colors hover:border-[#D4A5A0] hover:text-[#5C3A48] disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="edit-product-form"
+              disabled={loading || deleting}
+              className="flex-1 rounded-full py-2.5 font-[family-name:var(--font-inter)] text-xs font-medium tracking-widest uppercase transition-opacity"
+              style={{
+                backgroundColor: "var(--deep-mauve)",
+                color: "#fff",
+                opacity: loading || deleting ? 0.6 : 1,
+                cursor: loading || deleting ? "not-allowed" : "pointer",
+              }}
+            >
+              {loading ? "Guardando..." : "Guardar cambios"}
+            </button>
+          </div>
           <button
             type="button"
-            onClick={onClose}
-            className="flex-1 rounded-full border border-[#E8C9C1] py-2.5 font-[family-name:var(--font-inter)] text-xs font-medium tracking-widest text-[#7A6A6E] uppercase transition-colors hover:border-[#D4A5A0] hover:text-[#5C3A48]"
+            onClick={handleDelete}
+            disabled={loading || deleting}
+            className="w-full rounded-full border border-red-200 py-2.5 font-[family-name:var(--font-inter)] text-xs font-medium tracking-widest text-red-600 uppercase transition-colors hover:bg-red-50 disabled:opacity-50"
           >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            form="edit-product-form"
-            disabled={loading}
-            className="flex-1 rounded-full py-2.5 font-[family-name:var(--font-inter)] text-xs font-medium tracking-widest uppercase transition-opacity"
-            style={{
-              backgroundColor: "var(--deep-mauve)",
-              color: "#fff",
-              opacity: loading ? 0.6 : 1,
-              cursor: loading ? "not-allowed" : "pointer",
-            }}
-          >
-            {loading ? "Guardando..." : "Guardar cambios"}
+            {deleting ? "Eliminando..." : "Eliminar producto"}
           </button>
         </div>
       </div>
@@ -708,6 +746,11 @@ export default function ProductsPage() {
   function handleCreated(newProduct: DbProduct) {
     setProducts((prev) => [newProduct, ...prev]);
     setCreatingProduct(false);
+  }
+
+  function handleDeletedProduct(id: string) {
+    setProducts((prev) => prev.filter((p) => String(p.id) !== id));
+    setEditingProduct(null);
   }
 
   async function handleToggle(product: DbProduct) {
@@ -1068,6 +1111,7 @@ export default function ProductsPage() {
             handleUpdate(updated);
             setEditingProduct(null);
           }}
+          onDelete={handleDeletedProduct}
         />
       )}
 
