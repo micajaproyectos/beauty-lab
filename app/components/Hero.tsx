@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { checkIsAdmin } from "@/lib/checkAdmin";
+import { useAdmin } from "@/app/context/AdminContext";
 import { PencilBtn, InlineEditModal, get, type ContentMap, type Field } from "@/app/components/ui/InlineEdit";
 
 const DEFAULTS: ContentMap = {
@@ -23,19 +23,15 @@ type EditingSection = "eyebrow" | "titulo" | "descripcion" | "stats" | "imagen_t
 
 export default function Hero() {
   const [content, setContent] = useState<ContentMap>(DEFAULTS);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { isAdmin } = useAdmin();
   const [editing, setEditing] = useState<EditingSection>(null);
 
   useEffect(() => {
     let mounted = true;
 
     async function load() {
-      const [adminStatus, { data }] = await Promise.all([
-        checkIsAdmin(),
-        supabase.from("contenido_sitio").select("clave, valor").eq("seccion", "hero"),
-      ]);
+      const { data } = await supabase.from("contenido_sitio").select("clave, valor").eq("seccion", "hero");
       if (!mounted) return;
-      setIsAdmin(adminStatus);
       if (data) {
         const map: ContentMap = {};
         for (const item of data) map[item.clave] = item.valor;

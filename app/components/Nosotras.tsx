@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { supabase } from "@/lib/supabaseClient";
-import { checkIsAdmin } from "@/lib/checkAdmin";
+import { useAdmin } from "@/app/context/AdminContext";
 import { PencilBtn, InlineEditModal, get, type ContentMap, type Field } from "@/app/components/ui/InlineEdit";
 
 export interface Cert {
@@ -170,7 +170,7 @@ function CertEditModal({
 export default function Nosotras() {
   const [content, setContent] = useState<ContentMap>(DEFAULTS);
   const [certs, setCerts] = useState<Cert[]>(DEFAULT_CERTS);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { isAdmin } = useAdmin();
   const [editing, setEditing] = useState<EditingSection>(null);
   const [editingCertIdx, setEditingCertIdx] = useState<number | null>(null);
 
@@ -180,12 +180,8 @@ export default function Nosotras() {
   useEffect(() => {
     let mounted = true;
     async function load() {
-      const [adminStatus, { data }] = await Promise.all([
-        checkIsAdmin(),
-        supabase.from("contenido_sitio").select("clave, valor").eq("seccion", "nosotras"),
-      ]);
+      const { data } = await supabase.from("contenido_sitio").select("clave, valor").eq("seccion", "nosotras");
       if (!mounted) return;
-      setIsAdmin(adminStatus);
       if (data) {
         const map: ContentMap = {};
         for (const item of data) map[item.clave] = item.valor;

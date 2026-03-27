@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useCart } from "../context/CartContext";
 import { supabase } from "@/lib/supabaseClient";
-import { checkIsAdmin } from "@/lib/checkAdmin";
+import { useAdmin } from "@/app/context/AdminContext";
 import type { Tratamiento } from "@/lib/types";
 import { PencilBtn, InlineEditModal, get, type ContentMap, type Field } from "@/app/components/ui/InlineEdit";
 
@@ -221,7 +221,7 @@ function QuoteButton({ id, title }: { id: string; title: string }) {
 export default function Services() {
   const { addItem } = useCart();
   const [dbTratamientos, setDbTratamientos] = useState<Tratamiento[]>([]);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { isAdmin } = useAdmin();
   const [added, setAdded] = useState<string | null>(null);
   const [content, setContent] = useState<ContentMap>(DEFAULTS);
   const [editing, setEditing] = useState<SVEditing>(null);
@@ -229,13 +229,11 @@ export default function Services() {
   useEffect(() => {
     let mounted = true;
     async function load() {
-      const [adminStatus, { data: tratData }, { data: contentData }] = await Promise.all([
-        checkIsAdmin(),
+      const [{ data: tratData }, { data: contentData }] = await Promise.all([
         supabase.from("tratamientos").select("*").order("orden").order("created_at"),
         supabase.from("contenido_sitio").select("clave, valor").eq("seccion", "services"),
       ]);
       if (!mounted) return;
-      setIsAdmin(adminStatus);
       setDbTratamientos(tratData ?? []);
       if (contentData) {
         const map: ContentMap = {};
