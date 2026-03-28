@@ -738,6 +738,12 @@ export default function ProductsPage() {
     ) {
       const silent = opts?.silent ?? false;
       try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        console.log("[Productos] auth before query", {
+          userId: sessionData.session?.user?.id ?? null,
+          email: sessionData.session?.user?.email ?? null,
+        });
+
         const productosResult = await withTimeout(
           Promise.resolve(supabase.from("productos").select("*")),
           15000,
