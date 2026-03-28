@@ -34,7 +34,7 @@ export default function ProductCardDB({ product, isAdmin, onEdit, onToggle }: Pr
     <div className={`group relative flex flex-col overflow-hidden rounded-3xl bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_48px_rgba(92,58,72,0.12)] ${!product.activo ? "opacity-50" : ""}`}>
 
       {/* Image area */}
-      <div className="relative h-52 overflow-hidden bg-[#F2E4DF]">
+      <div className="relative h-80 overflow-hidden bg-[#F2E4DF]">
         {product.imagen_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
