@@ -1050,7 +1050,7 @@ export default function ProductsPage() {
           {loadingProducts ? (
             <div className="flex items-center justify-center py-24">
               <p className="font-[family-name:var(--font-inter)] text-sm font-light tracking-widest text-[#B5A8AC] uppercase">
-                Cargando productos...
+                Cargando productos... v2 timeout
               </p>
             </div>
           ) : filtered.length === 0 ? (
