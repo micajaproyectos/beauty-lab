@@ -107,9 +107,16 @@ function CreateProductModal({
     setError(null);
     const err = validate();
     if (err) { setError(err); return; }
+    console.log("[CreateProductModal] A) antes de setLoading");
     setLoading(true);
+    console.log("[CreateProductModal] B) después de setLoading");
 
     try {
+      console.log("[CreateProductModal] C) antes de getSession");
+      const sessionBeforeUpload = await supabase.auth.getSession();
+      console.log("[CreateProductModal] D) después de getSession");
+      console.log("[CreateProductModal] 1) getSession antes de subir imagen:", sessionBeforeUpload);
+
       const fileName = buildUniqueFileName(imagen!.name);
       const { error: uploadError } = await supabase.storage
         .from("productos")
@@ -117,8 +124,13 @@ function CreateProductModal({
 
       if (uploadError) { setError(`Error al subir imagen: ${uploadError.message}`); return; }
 
+      console.log("[CreateProductModal] 2) Upload OK, archivo subido:", fileName);
+
       const { data: urlData } = supabase.storage.from("productos").getPublicUrl(fileName);
       const imagen_url = urlData.publicUrl;
+
+      const sessionBeforeInsert = await supabase.auth.getSession();
+      console.log("[CreateProductModal] 3) getSession justo antes del insert:", sessionBeforeInsert);
 
       const { data, error: insertError } = await supabase
         .from("productos")
@@ -136,13 +148,16 @@ function CreateProductModal({
         .select()
         .single();
 
+      console.log("[CreateProductModal] 4) Después del insert — data:", data, "insertError:", insertError);
+
       if (insertError) { setError(`Error al guardar: ${insertError.message}`); return; }
 
       onCreated(data as DbProduct);
     } catch (err) {
-      console.error("[CreateModal]", err);
+      console.error("[CreateProductModal] 5) catch — error completo:", err);
       setError("Ocurrió un error inesperado.");
     } finally {
+      console.log("[CreateProductModal] 6) finally — loading vuelve a false");
       setLoading(false);
     }
   }
@@ -167,7 +182,7 @@ function CreateProductModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-modal-title"
-        className="fixed left-1/2 top-1/2 z-[201] flex w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col rounded-3xl bg-[#FAF8F5] shadow-2xl"
+        className="fixed left-1/2 top-1/2 z-[201] flex w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl bg-[#FAF8F5] shadow-2xl"
         style={{ maxHeight: "90dvh" }}
       >
         {/* Header — fijo */}
@@ -194,8 +209,13 @@ function CreateProductModal({
           </button>
         </div>
 
-        {/* Body — scrolleable */}
-        <form id="create-product-form" onSubmit={handleSubmit} noValidate className="flex flex-col gap-4 overflow-y-auto px-8 py-6">
+        {/* Body — scrolleable (flex-1 + min-h-0 para que overflow funcione dentro de max-h del modal) */}
+        <form
+          id="create-product-form"
+          onSubmit={handleSubmit}
+          noValidate
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-8 py-6"
+        >
 
           {/* Nombre */}
           <div className="flex flex-col gap-1.5">
@@ -213,14 +233,14 @@ function CreateProductModal({
           </div>
 
           {/* Precio + Stock */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex min-w-0 flex-col gap-1.5">
               {labelEl("Precio")}
               <input type="number" min="0" step="0.01" value={precio}
                 onChange={(e) => setPrecio(e.target.value)} placeholder="Ej: 12500"
                 className={inputCls} required />
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex min-w-0 flex-col gap-1.5">
               {labelEl("Stock")}
               <input type="number" min="0" step="1" value={stock}
                 onChange={(e) => setStock(e.target.value)} placeholder="Ej: 20"
@@ -229,8 +249,8 @@ function CreateProductModal({
           </div>
 
           {/* Categoría + Tipo de piel */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex min-w-0 flex-col gap-1.5">
               {labelEl("Categoría")}
               <select value={categoria} onChange={(e) => setCategoria(e.target.value)}
                 className={`${inputCls} cursor-pointer`} required>
@@ -243,7 +263,7 @@ function CreateProductModal({
                 <option value="otro">Otro</option>
               </select>
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex min-w-0 flex-col gap-1.5">
               {labelEl("Tipo de piel")}
               <select value={tipoPiel} onChange={(e) => setTipoPiel(e.target.value)}
                 className={`${inputCls} cursor-pointer`}>
@@ -469,7 +489,7 @@ function EditProductModal({ product, onClose, onSave, onDelete }: EditModalProps
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-modal-title"
-        className="fixed left-1/2 top-1/2 z-[201] flex w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col rounded-3xl bg-[#FAF8F5] shadow-2xl"
+        className="fixed left-1/2 top-1/2 z-[201] flex w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl bg-[#FAF8F5] shadow-2xl"
         style={{ maxHeight: "90dvh" }}
       >
         {/* Header — fijo */}
@@ -497,7 +517,11 @@ function EditProductModal({ product, onClose, onSave, onDelete }: EditModalProps
         </div>
 
         {/* Body — scrolleable */}
-        <form id="edit-product-form" onSubmit={handleSubmit} className="flex flex-col gap-4 overflow-y-auto px-8 py-6">
+        <form
+          id="edit-product-form"
+          onSubmit={handleSubmit}
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-8 py-6"
+        >
 
           {/* Nombre */}
           <div className="flex flex-col gap-1.5">
@@ -528,8 +552,8 @@ function EditProductModal({ product, onClose, onSave, onDelete }: EditModalProps
           </div>
 
           {/* Precio + Tipo de piel */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex min-w-0 flex-col gap-1.5">
               <label className="font-[family-name:var(--font-inter)] text-[10px] font-medium tracking-widest text-[#7A6A6E] uppercase">
                 Precio
               </label>
@@ -543,7 +567,7 @@ function EditProductModal({ product, onClose, onSave, onDelete }: EditModalProps
                 required
               />
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex min-w-0 flex-col gap-1.5">
               <label className="font-[family-name:var(--font-inter)] text-[10px] font-medium tracking-widest text-[#7A6A6E] uppercase">
                 Tipo de piel
               </label>
