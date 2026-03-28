@@ -728,44 +728,30 @@ export default function ProductsPage() {
       opts?: { silent?: boolean } | { silent?: boolean; authUserId: string | null }
     ) {
       const silent = opts?.silent ?? false;
-      console.log("[Productos] loadCatalog:start", {
-        silent: opts?.silent ?? false,
-        authUserId: opts && "authUserId" in opts ? opts.authUserId : "session",
-      });
       try {
-        console.log("[Productos] query:productos:start");
         const { data: productos, error } = await supabase.from("productos").select("*");
-        console.log("[Productos] query:productos:end", {
-          error: error?.message ?? null,
-          count: productos?.length ?? 0,
-        });
 
-        console.log("[Productos] query:header:start");
         const { data: headerData } = await supabase
           .from("contenido_sitio")
           .select("clave, valor")
           .eq("seccion", "productos_header");
-        console.log("[Productos] query:header:end", { count: headerData?.length ?? 0 });
 
         if (mounted) {
           if (error) {
             console.error("[Productos] Error al cargar:", error.message);
           } else {
-            console.log("[Productos] setProducts");
             setProducts(productos ?? []);
           }
 
           if (headerData) {
             const map: ContentMap = {};
             for (const item of headerData) map[item.clave] = item.valor;
-            console.log("[Productos] setPhContent");
             setPhContent(map);
           }
         }
       } catch (e) {
         console.error("[Productos] Error inesperado:", e);
       } finally {
-        console.log("[Productos] loadCatalog:finally", { silent });
         if (mounted && !silent) setLoadingProducts(false);
       }
 
