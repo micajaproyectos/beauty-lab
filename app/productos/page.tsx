@@ -722,6 +722,15 @@ export default function ProductsPage() {
   useEffect(() => {
     let mounted = true;
 
+    function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+      return Promise.race([
+        promise,
+        new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error(message)), ms)
+        ),
+      ]);
+    }
+
     /** Productos + hero header. `silent`: sin tocar el spinner (solo login/logout). */
     /** Si viene `authUserId`, no usar getSession (llamada desde onAuthStateChange). */
     async function loadCatalog(
@@ -729,12 +738,20 @@ export default function ProductsPage() {
     ) {
       const silent = opts?.silent ?? false;
       try {
-        const { data: productos, error } = await supabase.from("productos").select("*");
+        const { data: productos, error } = await withTimeout(
+          supabase.from("productos").select("*"),
+          15000,
+          "Timeout al consultar productos"
+        );
 
-        const { data: headerData } = await supabase
-          .from("contenido_sitio")
-          .select("clave, valor")
-          .eq("seccion", "productos_header");
+        const { data: headerData } = await withTimeout(
+          supabase
+            .from("contenido_sitio")
+            .select("clave, valor")
+            .eq("seccion", "productos_header"),
+          15000,
+          "Timeout al consultar contenido_sitio (productos_header)"
+        );
 
         if (mounted) {
           if (error) {
