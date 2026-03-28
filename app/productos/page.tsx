@@ -106,15 +106,31 @@ function CreateProductModal({
     if (err) { setError(err); return; }
     setLoading(true);
 
+    const UPLOAD_TIMEOUT_MS = 15_000;
+
     try {
       console.log("[CreateProductModal] 1) antes de buildUniqueFileName");
       const fileName = buildUniqueFileName(imagen!.name);
       console.log("[CreateProductModal] 2) fileName:", fileName);
       console.log("[CreateProductModal] 3) antes de upload");
-      const { error: uploadError } = await supabase.storage
+
+      const uploadPromise = supabase.storage
         .from("productos")
         .upload(fileName, imagen!, { upsert: false });
 
+      const timeoutPromise = new Promise<"timeout">((resolve) =>
+        setTimeout(() => resolve("timeout"), UPLOAD_TIMEOUT_MS)
+      );
+
+      const raced = await Promise.race([uploadPromise, timeoutPromise]);
+
+      if (raced === "timeout") {
+        console.log("[CreateProductModal] 4) despues de upload", { uploadError: null, timedOut: true });
+        setError("La subida de imagen tardó demasiado. Intenta nuevamente.");
+        return;
+      }
+
+      const { error: uploadError } = raced;
       console.log("[CreateProductModal] 4) despues de upload", { uploadError });
 
       if (uploadError) { setError(`Error al subir imagen: ${uploadError.message}`); return; }
@@ -318,9 +334,9 @@ function CreateProductModal({
             className="flex-1 rounded-full border border-[#E8C9C1] py-2.5 font-[family-name:var(--font-inter)] text-xs font-medium tracking-widest text-[#7A6A6E] uppercase transition-colors hover:border-[#D4A5A0] hover:text-[#5C3A48]">
             Cancelar
           </button>
-          <button type="submit" form="create-product-form" disabled={loading}
+          <button type="submit" form="create-product-form" disabled={loading || !imagen}
             className="flex-1 rounded-full py-2.5 font-[family-name:var(--font-inter)] text-xs font-medium tracking-widest uppercase transition-opacity"
-            style={{ backgroundColor: "var(--deep-mauve)", color: "#fff", opacity: loading ? 0.6 : 1, cursor: loading ? "not-allowed" : "pointer" }}>
+            style={{ backgroundColor: "var(--deep-mauve)", color: "#fff", opacity: loading || !imagen ? 0.6 : 1, cursor: loading || !imagen ? "not-allowed" : "pointer" }}>
             {loading ? "Guardando..." : "Crear producto"}
           </button>
         </div>
@@ -712,28 +728,44 @@ export default function ProductsPage() {
       opts?: { silent?: boolean } | { silent?: boolean; authUserId: string | null }
     ) {
       const silent = opts?.silent ?? false;
+      console.log("[Productos] loadCatalog:start", {
+        silent: opts?.silent ?? false,
+        authUserId: opts && "authUserId" in opts ? opts.authUserId : "session",
+      });
       try {
-        const [{ data: productos, error }, { data: headerData }] = await Promise.all([
-          supabase.from("productos").select("*"),
-          supabase.from("contenido_sitio").select("clave, valor").eq("seccion", "productos_header"),
-        ]);
+        console.log("[Productos] query:productos:start");
+        const { data: productos, error } = await supabase.from("productos").select("*");
+        console.log("[Productos] query:productos:end", {
+          error: error?.message ?? null,
+          count: productos?.length ?? 0,
+        });
+
+        console.log("[Productos] query:header:start");
+        const { data: headerData } = await supabase
+          .from("contenido_sitio")
+          .select("clave, valor")
+          .eq("seccion", "productos_header");
+        console.log("[Productos] query:header:end", { count: headerData?.length ?? 0 });
 
         if (mounted) {
           if (error) {
             console.error("[Productos] Error al cargar:", error.message);
           } else {
+            console.log("[Productos] setProducts");
             setProducts(productos ?? []);
           }
 
           if (headerData) {
             const map: ContentMap = {};
             for (const item of headerData) map[item.clave] = item.valor;
+            console.log("[Productos] setPhContent");
             setPhContent(map);
           }
         }
       } catch (e) {
         console.error("[Productos] Error inesperado:", e);
       } finally {
+        console.log("[Productos] loadCatalog:finally", { silent });
         if (mounted && !silent) setLoadingProducts(false);
       }
 
