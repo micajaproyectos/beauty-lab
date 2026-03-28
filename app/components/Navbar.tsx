@@ -237,11 +237,11 @@ export default function Navbar() {
             Reservar
           </button>
 
-          {/* Admin access — discrete */}
+          {/* Admin access — visible también en móvil (junto al carrito) */}
           <Link
             href="/login"
             aria-label="Acceso administrador"
-            className={`hidden h-8 w-8 items-center justify-center rounded-full transition-all md:flex ${
+            className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition-all ${
               !scrolled && hasDarkHeader
                 ? "text-white/30 hover:text-white/70"
                 : "text-[#B5A8AC] hover:text-[#8B5E6D]"
@@ -295,7 +295,7 @@ export default function Navbar() {
       {/* Mobile Menu */}
       <div
         className={`overflow-hidden transition-all duration-500 md:hidden ${
-          menuOpen ? "max-h-96" : "max-h-0"
+          menuOpen ? "max-h-[28rem]" : "max-h-0"
         }`}
       >
         <ul className="flex flex-col gap-1 bg-[#FAF8F5] px-6 pb-6 pt-2">
@@ -319,6 +319,20 @@ export default function Navbar() {
             >
               Reservar
             </button>
+          </li>
+          <li className="pt-2">
+            <Link
+              href="/login"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center justify-center gap-2 py-3 font-[family-name:var(--font-inter)] text-xs font-light tracking-widest text-[#B5A8AC] uppercase transition-colors hover:text-[#5C3A48]"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                  d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+                />
+              </svg>
+              Acceso administrador
+            </Link>
           </li>
         </ul>
       </div>
