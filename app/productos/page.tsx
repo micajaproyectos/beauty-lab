@@ -738,20 +738,30 @@ export default function ProductsPage() {
     ) {
       const silent = opts?.silent ?? false;
       try {
-        const { data: productos, error } = await withTimeout(
-          supabase.from("productos").select("*"),
+        const productosResult = await withTimeout(
+          Promise.resolve(supabase.from("productos").select("*")),
           15000,
           "Timeout al consultar productos"
         );
+        const { data: productos, error } = productosResult as {
+          data: DbProduct[] | null;
+          error: { message: string } | null;
+        };
 
-        const { data: headerData } = await withTimeout(
-          supabase
-            .from("contenido_sitio")
-            .select("clave, valor")
-            .eq("seccion", "productos_header"),
+        const contenidoHeaderResult = await withTimeout(
+          Promise.resolve(
+            supabase
+              .from("contenido_sitio")
+              .select("clave, valor")
+              .eq("seccion", "productos_header")
+          ),
           15000,
           "Timeout al consultar contenido_sitio (productos_header)"
         );
+        const { data: headerData } = contenidoHeaderResult as {
+          data: { clave: string; valor: string }[] | null;
+          error: { message: string } | null;
+        };
 
         if (mounted) {
           if (error) {
