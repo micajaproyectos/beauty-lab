@@ -688,39 +688,49 @@ export default function ProductsPage() {
   useEffect(() => {
     let mounted = true;
 
-    async function init() {
-      // Productos y contenido del header se cargan primero — sin esperar el check de admin
-      const [{ data: productos, error }, { data: headerData }] = await Promise.all([
-        supabase.from("productos").select("*"),
-        supabase.from("contenido_sitio").select("clave, valor").eq("seccion", "productos_header"),
-      ]);
+    /** Productos + hero header. `silent`: sin tocar el spinner (solo login/logout). */
+    async function loadCatalog(opts?: { silent?: boolean }) {
+      const silent = opts?.silent ?? false;
+      try {
+        const [{ data: productos, error }, { data: headerData }] = await Promise.all([
+          supabase.from("productos").select("*"),
+          supabase.from("contenido_sitio").select("clave, valor").eq("seccion", "productos_header"),
+        ]);
+
+        if (mounted) {
+          if (error) {
+            console.error("[Productos] Error al cargar:", error.message);
+          } else {
+            setProducts(productos ?? []);
+          }
+
+          if (headerData) {
+            const map: ContentMap = {};
+            for (const item of headerData) map[item.clave] = item.valor;
+            setPhContent(map);
+          }
+        }
+      } catch (e) {
+        console.error("[Productos] Error inesperado:", e);
+      } finally {
+        if (mounted && !silent) setLoadingProducts(false);
+      }
 
       if (!mounted) return;
-
-      if (error) {
-        console.error("[Productos] Error al cargar:", error.message);
-      } else {
-        setProducts(productos ?? []);
-      }
-
-      if (headerData) {
-        const map: ContentMap = {};
-        for (const item of headerData) map[item.clave] = item.valor;
-        setPhContent(map);
-      }
-
-      // Productos visibles para el usuario — la UI ya no espera el admin check
-      setLoadingProducts(false);
-
-      // Admin check corre en segundo plano sin bloquear la experiencia del usuario
       const adminStatus = await checkIsAdmin();
       if (mounted) setIsAdmin(adminStatus);
     }
 
-    init();
+    void loadCatalog();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
+
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+        await loadCatalog({ silent: true });
+        return;
+      }
+
       if (!session) {
         setIsAdmin(false);
         return;
