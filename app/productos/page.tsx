@@ -5,7 +5,7 @@ import Link from "next/link";
 import Footer from "../components/Footer";
 import ProductCardDB from "../components/ProductCardDB";
 import { supabase } from "@/lib/supabaseClient";
-import { checkIsAdmin } from "@/lib/checkAdmin";
+import { checkIsAdmin, checkIsAdminForUser } from "@/lib/checkAdmin";
 import type { DbProduct } from "@/lib/types";
 import { PencilBtn, InlineEditModal, get, type ContentMap, type Field } from "@/app/components/ui/InlineEdit";
 
@@ -70,7 +70,6 @@ function CreateProductModal({
   const [descripcion, setDescripcion] = useState("");
   const [precio, setPrecio] = useState("");
   const [categoria, setCategoria] = useState("");
-  const [stock, setStock] = useState("");
   const [badge, setBadge] = useState("");
   const [tipoPiel, setTipoPiel] = useState("");
   const [imagen, setImagen] = useState<File | null>(null);
@@ -96,8 +95,6 @@ function CreateProductModal({
     if (!categoria.trim()) return "La categoría es obligatoria.";
     if (!precio || isNaN(Number(precio)) || Number(precio) <= 0)
       return "El precio debe ser mayor a 0.";
-    if (stock !== "" && (isNaN(Number(stock)) || Number(stock) < 0))
-      return "El stock debe ser mayor o igual a 0.";
     if (!imagen) return "Selecciona una imagen para el producto.";
     return null;
   }
@@ -107,31 +104,25 @@ function CreateProductModal({
     setError(null);
     const err = validate();
     if (err) { setError(err); return; }
-    console.log("[CreateProductModal] A) antes de setLoading");
     setLoading(true);
-    console.log("[CreateProductModal] B) después de setLoading");
 
     try {
-      console.log("[CreateProductModal] C) antes de getSession");
-      const sessionBeforeUpload = await supabase.auth.getSession();
-      console.log("[CreateProductModal] D) después de getSession");
-      console.log("[CreateProductModal] 1) getSession antes de subir imagen:", sessionBeforeUpload);
-
+      console.log("[CreateProductModal] 1) antes de buildUniqueFileName");
       const fileName = buildUniqueFileName(imagen!.name);
+      console.log("[CreateProductModal] 2) fileName:", fileName);
+      console.log("[CreateProductModal] 3) antes de upload");
       const { error: uploadError } = await supabase.storage
         .from("productos")
         .upload(fileName, imagen!, { upsert: false });
 
-      if (uploadError) { setError(`Error al subir imagen: ${uploadError.message}`); return; }
+      console.log("[CreateProductModal] 4) despues de upload", { uploadError });
 
-      console.log("[CreateProductModal] 2) Upload OK, archivo subido:", fileName);
+      if (uploadError) { setError(`Error al subir imagen: ${uploadError.message}`); return; }
 
       const { data: urlData } = supabase.storage.from("productos").getPublicUrl(fileName);
       const imagen_url = urlData.publicUrl;
 
-      const sessionBeforeInsert = await supabase.auth.getSession();
-      console.log("[CreateProductModal] 3) getSession justo antes del insert:", sessionBeforeInsert);
-
+      console.log("[CreateProductModal] 5) antes de insert", { imagen_url });
       const { data, error: insertError } = await supabase
         .from("productos")
         .insert({
@@ -139,7 +130,7 @@ function CreateProductModal({
           "descripción": descripcion.trim(),
           precio: Number(precio),
           categoria: categoria.trim(),
-          stock: stock !== "" ? Number(stock) : 0,
+          stock: 0,
           imagen_url,
           activo: true,
           badge: badge.trim(),
@@ -148,16 +139,26 @@ function CreateProductModal({
         .select()
         .single();
 
-      console.log("[CreateProductModal] 4) Después del insert — data:", data, "insertError:", insertError);
+      console.log("[CreateProductModal] 6) despues de insert", { data, insertError });
 
       if (insertError) { setError(`Error al guardar: ${insertError.message}`); return; }
 
+      setNombre("");
+      setDescripcion("");
+      setPrecio("");
+      setCategoria("");
+      setBadge("");
+      setTipoPiel("");
+      setImagen(null);
+      setPreview(null);
+      if (fileRef.current) fileRef.current.value = "";
+
       onCreated(data as DbProduct);
     } catch (err) {
-      console.error("[CreateProductModal] 5) catch — error completo:", err);
+      console.error("[CreateModal]", err);
       setError("Ocurrió un error inesperado.");
     } finally {
-      console.log("[CreateProductModal] 6) finally — loading vuelve a false");
+      console.log("[CreateProductModal] 7) finally setLoading false");
       setLoading(false);
     }
   }
@@ -232,20 +233,12 @@ function CreateProductModal({
               className={`${inputCls} resize-none`} required />
           </div>
 
-          {/* Precio + Stock */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex min-w-0 flex-col gap-1.5">
-              {labelEl("Precio")}
-              <input type="number" min="0" step="0.01" value={precio}
-                onChange={(e) => setPrecio(e.target.value)} placeholder="Ej: 12500"
-                className={inputCls} required />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1.5">
-              {labelEl("Stock")}
-              <input type="number" min="0" step="1" value={stock}
-                onChange={(e) => setStock(e.target.value)} placeholder="Ej: 20"
-                className={inputCls} />
-            </div>
+          {/* Precio */}
+          <div className="flex flex-col gap-1.5">
+            {labelEl("Precio")}
+            <input type="number" min="0" step="0.01" value={precio}
+              onChange={(e) => setPrecio(e.target.value)} placeholder="Ej: 12500"
+              className={inputCls} required />
           </div>
 
           {/* Categoría + Tipo de piel */}
@@ -260,6 +253,7 @@ function CreateProductModal({
                 <option value="hidratacion">Hidratación</option>
                 <option value="tratamiento">Tratamiento</option>
                 <option value="kit">Kit</option>
+                <option value="maquillaje">Maquillaje</option>
                 <option value="otro">Otro</option>
               </select>
             </div>
@@ -713,7 +707,10 @@ export default function ProductsPage() {
     let mounted = true;
 
     /** Productos + hero header. `silent`: sin tocar el spinner (solo login/logout). */
-    async function loadCatalog(opts?: { silent?: boolean }) {
+    /** Si viene `authUserId`, no usar getSession (llamada desde onAuthStateChange). */
+    async function loadCatalog(
+      opts?: { silent?: boolean } | { silent?: boolean; authUserId: string | null }
+    ) {
       const silent = opts?.silent ?? false;
       try {
         const [{ data: productos, error }, { data: headerData }] = await Promise.all([
@@ -741,7 +738,10 @@ export default function ProductsPage() {
       }
 
       if (!mounted) return;
-      const adminStatus = await checkIsAdmin();
+      const adminStatus =
+        opts && "authUserId" in opts
+          ? await checkIsAdminForUser(opts.authUserId)
+          : await checkIsAdmin();
       if (mounted) setIsAdmin(adminStatus);
     }
 
@@ -751,7 +751,7 @@ export default function ProductsPage() {
       if (!mounted) return;
 
       if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
-        await loadCatalog({ silent: true });
+        await loadCatalog({ silent: true, authUserId: session?.user?.id ?? null });
         return;
       }
 

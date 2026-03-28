@@ -12,18 +12,17 @@ type AdminContextValue = {
 
 const AdminContext = createContext<AdminContextValue | null>(null);
 
-async function computeIsAdmin(): Promise<{ isAdmin: boolean; userId: string | null }> {
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError || !sessionData.session) return { isAdmin: false, userId: null };
+/** Solo consulta `admins` por userId; no usa getSession. */
+async function computeIsAdmin(userId: string | null): Promise<{ isAdmin: boolean; userId: string | null }> {
+  if (!userId) return { isAdmin: false, userId: null };
 
-  const uid = sessionData.session.user.id;
   const { data } = await supabase
     .from("admins")
     .select("user_id")
-    .eq("user_id", uid)
+    .eq("user_id", userId)
     .maybeSingle();
 
-  return { isAdmin: !!data, userId: uid };
+  return { isAdmin: !!data, userId };
 }
 
 export function AdminProvider({ children }: { children: ReactNode }) {
@@ -34,7 +33,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const refresh = async () => {
     setLoading(true);
     try {
-      const result = await computeIsAdmin();
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const uid = sessionError || !sessionData.session ? null : sessionData.session.user.id;
+      const result = await computeIsAdmin(uid);
       setIsAdmin(result.isAdmin);
       setUserId(result.userId);
     } finally {
@@ -46,15 +47,18 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     let mounted = true;
 
     (async () => {
-      const result = await computeIsAdmin();
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const uid = sessionError || !sessionData.session ? null : sessionData.session.user.id;
+      const result = await computeIsAdmin(uid);
       if (!mounted) return;
       setIsAdmin(result.isAdmin);
       setUserId(result.userId);
       setLoading(false);
     })();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async () => {
-      const result = await computeIsAdmin();
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const uid = session?.user?.id ?? null;
+      const result = await computeIsAdmin(uid);
       if (!mounted) return;
       setIsAdmin(result.isAdmin);
       setUserId(result.userId);
@@ -80,4 +84,3 @@ export function useAdmin() {
   if (!ctx) throw new Error("useAdmin must be used within <AdminProvider />");
   return ctx;
 }
-
