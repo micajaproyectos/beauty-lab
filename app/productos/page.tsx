@@ -739,7 +739,7 @@ export default function ProductsPage() {
       const silent = opts?.silent ?? false;
       try {
         const productosResult = await withTimeout(
-          Promise.resolve(supabase.from("productos").select("*")),
+          Promise.resolve(supabase.from("productos").select("id, nombre, precio, imagen_url, categoria, activo")),
           15000,
           "Timeout al consultar productos"
         );
