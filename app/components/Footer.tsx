@@ -156,6 +156,11 @@ export default function Footer() {
                   </li>
                 ))}
               </ul>
+              {category === "K-Beauty" && (
+                <p className="mt-4 max-w-[14rem] font-[family-name:var(--font-inter)] text-xs font-light leading-relaxed text-[#7A6A6E]">
+                  Sobre $35.000 envío gratis.
+                </p>
+              )}
             </div>
           ))}
         </div>

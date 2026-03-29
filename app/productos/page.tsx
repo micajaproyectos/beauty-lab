@@ -944,6 +944,9 @@ export default function ProductsPage() {
                   <br />
                   <em className="text-[#E8C9C1]">{pg("ph_titulo_em")}</em>
                 </h1>
+                <p className="mt-4 font-[family-name:var(--font-inter)] text-xs font-medium tracking-[0.12em] text-[#B8954A] drop-shadow-[0_0_20px_rgba(201,169,110,0.35)] sm:text-sm">
+                  Sobre $35.000 envío gratis.
+                </p>
               </div>
               <p className="max-w-sm font-[family-name:var(--font-inter)] text-sm font-light leading-relaxed text-[#E8C9C1]/70">
                 {pg("ph_descripcion")}

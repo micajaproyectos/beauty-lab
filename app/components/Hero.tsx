@@ -203,6 +203,9 @@ export default function Hero() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
               </svg>
             </a>
+            <p className="w-full text-center font-[family-name:var(--font-inter)] text-xs font-medium tracking-[0.12em] text-[#B8954A] drop-shadow-[0_0_20px_rgba(201,169,110,0.35)] sm:text-sm lg:text-left">
+              Sobre $35.000 envío gratis.
+            </p>
           </div>
 
           {/* Stats */}

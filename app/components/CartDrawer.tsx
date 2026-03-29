@@ -337,6 +337,10 @@ export default function CartDrawer() {
               </span>
             </div>
 
+            <p className="mt-3 text-center font-[family-name:var(--font-inter)] text-xs font-light text-[#7A6A6E]">
+              Sobre $35.000 envío gratis.
+            </p>
+
             {/* Send button */}
             <button
               onClick={handleSend}
