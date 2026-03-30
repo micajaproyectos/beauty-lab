@@ -52,20 +52,76 @@ export default function ServiciosHero() {
   const [content, setContent] = useState<ContentMap>(DEFAULTS);
   const { isAdmin } = useAdmin();
   const [editing, setEditing] = useState<Editing>(null);
+  const [loadingHero, setLoadingHero] = useState(true);
 
   useEffect(() => {
     let mounted = true;
+    let loadRunSeq = 0;
+
+    function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+      return Promise.race<T>([
+        promise,
+        new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error(message)), ms)
+        ),
+      ]);
+    }
+
     async function load() {
-      const { data } = await supabase.from("contenido_sitio").select("clave, valor").eq("seccion", "servicios_header");
-      if (!mounted) return;
-      if (data) {
-        const map: ContentMap = {};
-        for (const item of data) map[item.clave] = item.valor;
-        setContent(map);
+      const runId = `${Date.now()}-${++loadRunSeq}`;
+      try {
+        console.log(
+          `[Servicios] hero servicios-contenido fetch start | runId=${runId} | seccion=servicios_header`
+        );
+        const res = await withTimeout(
+          fetch("/api/servicios-contenido?seccion=servicios_header", {
+            cache: "no-store",
+          }),
+          15000,
+          "Timeout al consultar servicios-contenido"
+        );
+        let json: {
+          data?: { clave: string; valor: string }[] | null;
+          error?: string;
+        };
+        try {
+          json = await res.json();
+        } catch {
+          const msg = "Respuesta inválida del servidor";
+          console.log(`[Servicios] hero fetch error | runId=${runId} | message=${msg}`);
+          return;
+        }
+        if (!res.ok) {
+          const msg = typeof json.error === "string" ? json.error : res.statusText;
+          console.log(`[Servicios] hero fetch error | runId=${runId} | message=${msg}`);
+          return;
+        }
+        const data = json.data ?? null;
+        console.log(
+          `[Servicios] hero servicios-contenido fetch end | runId=${runId} | rows=${data?.length ?? 0}`
+        );
+        if (mounted && data) {
+          const map: ContentMap = {};
+          for (const item of data) map[item.clave] = item.valor;
+          setContent(map);
+        }
+      } catch (err) {
+        const isTimeout =
+          err instanceof Error && err.message === "Timeout al consultar servicios-contenido";
+        if (isTimeout) {
+          console.log(`[Servicios] hero servicios-contenido timeout | runId=${runId}`);
+        } else {
+          console.error("[Servicios] hero Error inesperado:", err);
+        }
+      } finally {
+        setLoadingHero(false);
       }
     }
-    load();
-    return () => { mounted = false; };
+
+    void load();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   async function saveFields(updates: ContentMap) {
@@ -81,7 +137,10 @@ export default function ServiciosHero() {
 
   return (
     <>
-      <div className="relative overflow-hidden bg-[#5C3A48] pt-32 pb-16">
+      <div
+        className="relative overflow-hidden bg-[#5C3A48] pt-32 pb-16"
+        aria-busy={loadingHero}
+      >
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-24 -right-24 h-[500px] w-[500px] rounded-full bg-[#8B5E6D]/30 blur-3xl" />
           <div className="absolute -bottom-24 -left-24 h-[400px] w-[400px] rounded-full bg-[#2C2329]/40 blur-3xl" />

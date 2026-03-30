@@ -745,7 +745,6 @@ export default function ProductsPage() {
     ) {
       const runId = `${Date.now()}-${++loadCatalogRunSeq}`;
       if (loadCatalogInFlightRef.current) {
-        console.log(`[Productos] loadCatalog skipped | runId=${runId} | reason=in-flight`);
         return;
       }
       loadCatalogInFlightRef.current = true;
@@ -756,13 +755,7 @@ export default function ProductsPage() {
         ? opts.authUserId
         : ctxUserIdRef.current;
 
-      console.log(`[Productos] loadCatalog start | runId=${runId} | silent=${silent}`);
       try {
-        console.log(
-          `[Productos] auth before query | userId=${quickUserId ?? "null"} | email=n/a | source=${fromAuthCallback ? "auth-callback" : "admin-context"}`
-        );
-
-        console.log(`[Productos] api fetch start | runId=${runId}`);
         type ProductosQueryPayload = {
           data: DbProduct[] | null;
           error: { message: string } | null;
@@ -778,23 +771,14 @@ export default function ProductsPage() {
                 json = await res.json();
               } catch {
                 const msg = "Respuesta inválida del servidor";
-                console.log(
-                  `[Productos] api fetch error | runId=${runId} | message=${msg}`
-                );
                 return { data: null, error: { message: msg } };
               }
               if (!res.ok) {
                 const msg =
                   typeof json.error === "string" ? json.error : res.statusText;
-                console.log(
-                  `[Productos] api fetch error | runId=${runId} | message=${msg}`
-                );
                 return { data: null, error: { message: msg } };
               }
               const data = json.data ?? null;
-              console.log(
-                `[Productos] api fetch end | runId=${runId} | rows=${data?.length ?? 0}`
-              );
               return { data, error: null };
             })(),
             15000,
@@ -804,7 +788,6 @@ export default function ProductsPage() {
           const isTimeout =
             err instanceof Error && err.message === "Timeout al consultar productos";
           if (isTimeout) {
-            console.log(`[Productos] api fetch timeout | runId=${runId}`);
             productosResult = {
               data: null,
               error: { message: "Timeout al consultar productos" },
@@ -824,39 +807,15 @@ export default function ProductsPage() {
           }
         }
 
-        console.log(`[Productos] header fetch start | runId=${runId}`);
-
         let headerJson: { data?: { clave: string; valor: string }[]; error?: string };
 
-        try {
-          const headerRes = await withTimeout(
-            fetch("/api/productos-header", { cache: "no-store" }),
-            15000,
-            "Timeout al consultar productos-header"
-          );
+        const headerRes = await withTimeout(
+          fetch("/api/productos-header", { cache: "no-store" }),
+          15000,
+          "Timeout al consultar productos-header"
+        );
 
-          headerJson = await headerRes.json();
-
-          if (!headerRes.ok) {
-            console.log(
-              `[Productos] header fetch error | runId=${runId} | message=${headerJson.error ?? "unknown"}`
-            );
-          } else {
-            console.log(
-              `[Productos] header fetch end | runId=${runId} | rows=${headerJson.data?.length ?? 0}`
-            );
-          }
-        } catch (err) {
-          const isTimeout =
-            err instanceof Error &&
-            err.message === "Timeout al consultar productos-header";
-
-          if (isTimeout) {
-            console.log(`[Productos] header fetch timeout | runId=${runId}`);
-          }
-
-          throw err;
-        }
+        headerJson = await headerRes.json();
 
         const headerData = headerJson?.data ?? [];
 
@@ -868,7 +827,6 @@ export default function ProductsPage() {
       } catch (e) {
         console.error("[Productos] Error inesperado:", e);
       } finally {
-        console.log(`[Productos] loadCatalog end | runId=${runId}`);
         if (!silent) setLoadingProducts(false);
         loadCatalogInFlightRef.current = false;
       }
@@ -880,7 +838,6 @@ export default function ProductsPage() {
         : ctxUserIdRef.current;
 
       if (adminUserId === null && !fromAuthCallback) {
-        console.log(`[Productos] getSession start | runId=${runId} | reason=admin-fallback`);
         try {
           const getSessionResult = await withTimeout(
             supabase.auth.getSession(),
@@ -889,19 +846,16 @@ export default function ProductsPage() {
           );
           const { data: sessionData, error: sessionError } = getSessionResult;
           if (sessionError) {
-            console.log(
-              `[Productos] getSession error | runId=${runId} | message=${sessionError.message ?? "unknown"}`
+            console.error(
+              "[Productos] getSession error:",
+              sessionError.message ?? "unknown"
             );
           }
           adminUserId = sessionData?.session?.user?.id ?? null;
-          console.log(
-            `[Productos] getSession end | runId=${runId} | hasSession=${!!sessionData?.session} | userId=${adminUserId ?? "null"}`
-          );
         } catch (getSessionErr) {
           const isTimeout =
             getSessionErr instanceof Error && getSessionErr.message === "Timeout getSession";
           if (isTimeout) {
-            console.log(`[Productos] getSession timeout | runId=${runId}`);
             console.error("[Productos] getSession timeout (defensive)", runId, getSessionErr);
           } else {
             console.error(`[Productos] getSession threw | runId=${runId}`, getSessionErr);
@@ -913,14 +867,12 @@ export default function ProductsPage() {
       if (mounted) setIsAdmin(adminStatus);
     }
 
-    console.log("[Productos] loadCatalog trigger | source=mount");
     void loadCatalog();
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
       if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
-        console.log("[Productos] loadCatalog trigger | source=auth-change");
         await loadCatalog({ silent: true, authUserId: session?.user?.id ?? null });
         return;
       }

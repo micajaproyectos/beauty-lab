@@ -225,24 +225,155 @@ export default function Services() {
   const [added, setAdded] = useState<string | null>(null);
   const [content, setContent] = useState<ContentMap>(DEFAULTS);
   const [editing, setEditing] = useState<SVEditing>(null);
+  const [loadingServices, setLoadingServices] = useState(true);
 
   useEffect(() => {
     let mounted = true;
-    async function load() {
-      const [{ data: tratData }, { data: contentData }] = await Promise.all([
-        supabase.from("tratamientos").select("*").order("orden").order("created_at"),
-        supabase.from("contenido_sitio").select("clave, valor").eq("seccion", "services"),
+    let loadRunSeq = 0;
+
+    function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+      return Promise.race<T>([
+        promise,
+        new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error(message)), ms)
+        ),
       ]);
-      if (!mounted) return;
-      setDbTratamientos(tratData ?? []);
-      if (contentData) {
-        const map: ContentMap = {};
-        for (const item of contentData) map[item.clave] = item.valor;
-        setContent(map);
+    }
+
+    async function load() {
+      const runId = `${Date.now()}-${++loadRunSeq}`;
+      try {
+        type TratPayload = {
+          data: Tratamiento[] | null;
+          error: { message: string } | null;
+        };
+        type ContentPayload = {
+          data: { clave: string; valor: string }[] | null;
+          error: { message: string } | null;
+        };
+
+        const [tratRes, contentRes] = await Promise.all([
+          (async (): Promise<TratPayload> => {
+            try {
+              console.log(`[Servicios] tratamientos fetch start | runId=${runId}`);
+              const res = await withTimeout(
+                fetch("/api/tratamientos", { cache: "no-store" }),
+                15000,
+                "Timeout al consultar tratamientos"
+              );
+              let json: { data?: Tratamiento[] | null; error?: string };
+              try {
+                json = await res.json();
+              } catch {
+                const msg = "Respuesta inválida del servidor";
+                console.log(`[Servicios] tratamientos fetch error | runId=${runId} | message=${msg}`);
+                return { data: null, error: { message: msg } };
+              }
+              if (!res.ok) {
+                const msg =
+                  typeof json.error === "string" ? json.error : res.statusText;
+                console.log(`[Servicios] tratamientos fetch error | runId=${runId} | message=${msg}`);
+                return { data: null, error: { message: msg } };
+              }
+              const data = json.data ?? null;
+              console.log(
+                `[Servicios] tratamientos fetch end | runId=${runId} | rows=${data?.length ?? 0}`
+              );
+              return { data, error: null };
+            } catch (err) {
+              const isTimeout =
+                err instanceof Error && err.message === "Timeout al consultar tratamientos";
+              if (isTimeout) {
+                console.log(`[Servicios] tratamientos fetch timeout | runId=${runId}`);
+                return {
+                  data: null,
+                  error: { message: "Timeout al consultar tratamientos" },
+                };
+              }
+              throw err;
+            }
+          })(),
+          (async (): Promise<ContentPayload> => {
+            try {
+              console.log(
+                `[Servicios] servicios-contenido fetch start | runId=${runId} | seccion=services`
+              );
+              const res = await withTimeout(
+                fetch("/api/servicios-contenido?seccion=services", {
+                  cache: "no-store",
+                }),
+                15000,
+                "Timeout al consultar servicios-contenido"
+              );
+              let json: {
+                data?: { clave: string; valor: string }[] | null;
+                error?: string;
+              };
+              try {
+                json = await res.json();
+              } catch {
+                const msg = "Respuesta inválida del servidor";
+                console.log(
+                  `[Servicios] servicios-contenido fetch error | runId=${runId} | message=${msg}`
+                );
+                return { data: null, error: { message: msg } };
+              }
+              if (!res.ok) {
+                const msg =
+                  typeof json.error === "string" ? json.error : res.statusText;
+                console.log(
+                  `[Servicios] servicios-contenido fetch error | runId=${runId} | message=${msg}`
+                );
+                return { data: null, error: { message: msg } };
+              }
+              const data = json.data ?? null;
+              console.log(
+                `[Servicios] servicios-contenido fetch end | runId=${runId} | seccion=services | rows=${data?.length ?? 0}`
+              );
+              return { data, error: null };
+            } catch (err) {
+              const isTimeout =
+                err instanceof Error &&
+                err.message === "Timeout al consultar servicios-contenido";
+              if (isTimeout) {
+                console.log(
+                  `[Servicios] servicios-contenido fetch timeout | runId=${runId} | seccion=services`
+                );
+                return {
+                  data: null,
+                  error: { message: "Timeout al consultar servicios-contenido" },
+                };
+              }
+              throw err;
+            }
+          })(),
+        ]);
+
+        if (mounted) {
+          if (tratRes.error) {
+            console.error("[Servicios] Error tratamientos:", tratRes.error.message);
+          } else {
+            setDbTratamientos(tratRes.data ?? []);
+          }
+          if (contentRes.error) {
+            console.error("[Servicios] Error contenido (services):", contentRes.error.message);
+          } else if (contentRes.data) {
+            const map: ContentMap = {};
+            for (const item of contentRes.data) map[item.clave] = item.valor;
+            setContent(map);
+          }
+        }
+      } catch (e) {
+        console.error("[Servicios] Error inesperado:", e);
+      } finally {
+        setLoadingServices(false);
       }
     }
-    load();
-    return () => { mounted = false; };
+
+    void load();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   async function saveFields(updates: ContentMap) {
@@ -329,6 +460,13 @@ export default function Services() {
         )}
 
         {/* Services grid */}
+        {loadingServices ? (
+          <div className="flex items-center justify-center py-24">
+            <p className="font-[family-name:var(--font-inter)] text-sm font-light tracking-widest text-[#B5A8AC] uppercase">
+              Cargando servicios...
+            </p>
+          </div>
+        ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {/* Static hardcoded services */}
           {staticServices.map((service) => (
@@ -418,6 +556,7 @@ export default function Services() {
             </a>
           )}
         </div>
+        )}
 
         {/* Bottom note */}
         <div className="mt-10 flex items-center justify-center gap-1">
