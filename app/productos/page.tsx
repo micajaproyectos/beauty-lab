@@ -727,8 +727,6 @@ export default function ProductsPage() {
 
   useEffect(() => {
     let mounted = true;
-    let loadCatalogRunSeq = 0;
-
     function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
       return Promise.race<T>([
         promise,
@@ -743,7 +741,6 @@ export default function ProductsPage() {
     async function loadCatalog(
       opts?: { silent?: boolean } | { silent?: boolean; authUserId: string | null }
     ) {
-      const runId = `${Date.now()}-${++loadCatalogRunSeq}`;
       if (loadCatalogInFlightRef.current) {
         return;
       }
@@ -856,9 +853,9 @@ export default function ProductsPage() {
           const isTimeout =
             getSessionErr instanceof Error && getSessionErr.message === "Timeout getSession";
           if (isTimeout) {
-            console.error("[Productos] getSession timeout (defensive)", runId, getSessionErr);
+            console.error("[Productos] getSession timeout (defensive)", getSessionErr);
           } else {
-            console.error(`[Productos] getSession threw | runId=${runId}`, getSessionErr);
+            console.error("[Productos] getSession threw", getSessionErr);
           }
         }
       }
