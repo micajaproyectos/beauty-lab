@@ -8,21 +8,16 @@ import type { User } from "@supabase/supabase-js";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null | undefined>(undefined);
+  const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
-    });
-
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
-
     return () => listener.subscription.unsubscribe();
   }, []);
 
@@ -44,17 +39,6 @@ export default function LoginPage() {
 
   async function handleSignOut() {
     await supabase.auth.signOut({ scope: "global" });
-  }
-
-  if (user === undefined) {
-    return (
-      <main className="min-h-screen flex items-center justify-center px-4"
-        style={{ backgroundColor: "var(--cream)" }}>
-        <p className="text-sm tracking-widest uppercase" style={{ color: "var(--warm-muted)", fontFamily: "var(--font-inter)" }}>
-          Cargando...
-        </p>
-      </main>
-    );
   }
 
   if (user) {
