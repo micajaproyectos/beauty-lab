@@ -110,34 +110,75 @@ function CreateProductModal({
     const UPLOAD_TIMEOUT_MS = 15_000;
 
     try {
+      function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+        return Promise.race<T>([
+          promise,
+          new Promise<T>((_, reject) =>
+            setTimeout(() => reject(new Error(message)), ms)
+          ),
+        ]);
+      }
+
       console.log("[CreateProductModal] 1) antes de buildUniqueFileName");
       const fileName = buildUniqueFileName(imagen!.name);
       console.log("[CreateProductModal] 2) fileName:", fileName);
       console.log("[CreateProductModal] 3) antes de upload");
 
-      const uploadPromise = supabase.storage
-        .from("productos")
-        .upload(fileName, imagen!, { upsert: false });
+      const formData = new FormData();
+      formData.append("file", imagen!);
+      formData.append("fileName", fileName);
 
-      const timeoutPromise = new Promise<"timeout">((resolve) =>
-        setTimeout(() => resolve("timeout"), UPLOAD_TIMEOUT_MS)
-      );
+      let uploadRes: Response;
+      try {
+        uploadRes = await withTimeout(
+          fetch("/api/upload-imagen", { method: "POST", body: formData }),
+          UPLOAD_TIMEOUT_MS,
+          "Timeout al subir imagen"
+        );
+      } catch (raceErr) {
+        const isTimeout =
+          raceErr instanceof Error && raceErr.message === "Timeout al subir imagen";
+        if (isTimeout) {
+          console.log("[CreateProductModal] 4) despues de upload", {
+            uploadError: null,
+            timedOut: true,
+          });
+          setError("La subida de imagen tardó demasiado. Intenta nuevamente.");
+          return;
+        }
+        throw raceErr;
+      }
 
-      const raced = await Promise.race([uploadPromise, timeoutPromise]);
-
-      if (raced === "timeout") {
-        console.log("[CreateProductModal] 4) despues de upload", { uploadError: null, timedOut: true });
-        setError("La subida de imagen tardó demasiado. Intenta nuevamente.");
+      let uploadJson: { url?: string; error?: string };
+      try {
+        uploadJson = await uploadRes.json();
+      } catch {
+        console.log("[CreateProductModal] 4) despues de upload", {
+          uploadError: { message: "Respuesta inválida del servidor" },
+        });
+        setError("Error al subir imagen. Intenta nuevamente.");
         return;
       }
 
-      const { error: uploadError } = raced;
-      console.log("[CreateProductModal] 4) despues de upload", { uploadError });
+      const uploadErrorMsg =
+        !uploadRes.ok || uploadJson.error
+          ? typeof uploadJson.error === "string"
+            ? uploadJson.error
+            : uploadRes.statusText
+          : null;
 
-      if (uploadError) { setError(`Error al subir imagen: ${uploadError.message}`); return; }
+      if (uploadErrorMsg || !uploadJson.url) {
+        console.log("[CreateProductModal] 4) despues de upload", {
+          uploadError: uploadErrorMsg ? { message: uploadErrorMsg } : { message: "Sin URL" },
+        });
+        setError(
+          `Error al subir imagen: ${uploadErrorMsg ?? "respuesta inválida"}`
+        );
+        return;
+      }
 
-      const { data: urlData } = supabase.storage.from("productos").getPublicUrl(fileName);
-      const imagen_url = urlData.publicUrl;
+      console.log("[CreateProductModal] 4) despues de upload", { uploadError: null });
+      const imagen_url = uploadJson.url;
 
       console.log("[CreateProductModal] 5) antes de insert", { imagen_url });
       const { data, error: insertError } = await supabase

@@ -229,7 +229,6 @@ export default function Services() {
 
   useEffect(() => {
     let mounted = true;
-    let loadRunSeq = 0;
 
     function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
       return Promise.race<T>([
@@ -241,7 +240,6 @@ export default function Services() {
     }
 
     async function load() {
-      const runId = `${Date.now()}-${++loadRunSeq}`;
       try {
         type TratPayload = {
           data: Tratamiento[] | null;
@@ -255,7 +253,6 @@ export default function Services() {
         const [tratRes, contentRes] = await Promise.all([
           (async (): Promise<TratPayload> => {
             try {
-              console.log(`[Servicios] tratamientos fetch start | runId=${runId}`);
               const res = await withTimeout(
                 fetch("/api/tratamientos", { cache: "no-store" }),
                 15000,
@@ -266,25 +263,19 @@ export default function Services() {
                 json = await res.json();
               } catch {
                 const msg = "Respuesta inválida del servidor";
-                console.log(`[Servicios] tratamientos fetch error | runId=${runId} | message=${msg}`);
                 return { data: null, error: { message: msg } };
               }
               if (!res.ok) {
                 const msg =
                   typeof json.error === "string" ? json.error : res.statusText;
-                console.log(`[Servicios] tratamientos fetch error | runId=${runId} | message=${msg}`);
                 return { data: null, error: { message: msg } };
               }
               const data = json.data ?? null;
-              console.log(
-                `[Servicios] tratamientos fetch end | runId=${runId} | rows=${data?.length ?? 0}`
-              );
               return { data, error: null };
             } catch (err) {
               const isTimeout =
                 err instanceof Error && err.message === "Timeout al consultar tratamientos";
               if (isTimeout) {
-                console.log(`[Servicios] tratamientos fetch timeout | runId=${runId}`);
                 return {
                   data: null,
                   error: { message: "Timeout al consultar tratamientos" },
@@ -295,9 +286,6 @@ export default function Services() {
           })(),
           (async (): Promise<ContentPayload> => {
             try {
-              console.log(
-                `[Servicios] servicios-contenido fetch start | runId=${runId} | seccion=services`
-              );
               const res = await withTimeout(
                 fetch("/api/servicios-contenido?seccion=services", {
                   cache: "no-store",
@@ -313,32 +301,20 @@ export default function Services() {
                 json = await res.json();
               } catch {
                 const msg = "Respuesta inválida del servidor";
-                console.log(
-                  `[Servicios] servicios-contenido fetch error | runId=${runId} | message=${msg}`
-                );
                 return { data: null, error: { message: msg } };
               }
               if (!res.ok) {
                 const msg =
                   typeof json.error === "string" ? json.error : res.statusText;
-                console.log(
-                  `[Servicios] servicios-contenido fetch error | runId=${runId} | message=${msg}`
-                );
                 return { data: null, error: { message: msg } };
               }
               const data = json.data ?? null;
-              console.log(
-                `[Servicios] servicios-contenido fetch end | runId=${runId} | seccion=services | rows=${data?.length ?? 0}`
-              );
               return { data, error: null };
             } catch (err) {
               const isTimeout =
                 err instanceof Error &&
                 err.message === "Timeout al consultar servicios-contenido";
               if (isTimeout) {
-                console.log(
-                  `[Servicios] servicios-contenido fetch timeout | runId=${runId} | seccion=services`
-                );
                 return {
                   data: null,
                   error: { message: "Timeout al consultar servicios-contenido" },

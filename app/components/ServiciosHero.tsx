@@ -56,7 +56,6 @@ export default function ServiciosHero() {
 
   useEffect(() => {
     let mounted = true;
-    let loadRunSeq = 0;
 
     function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
       return Promise.race<T>([
@@ -68,11 +67,7 @@ export default function ServiciosHero() {
     }
 
     async function load() {
-      const runId = `${Date.now()}-${++loadRunSeq}`;
       try {
-        console.log(
-          `[Servicios] hero servicios-contenido fetch start | runId=${runId} | seccion=servicios_header`
-        );
         const res = await withTimeout(
           fetch("/api/servicios-contenido?seccion=servicios_header", {
             cache: "no-store",
@@ -87,19 +82,15 @@ export default function ServiciosHero() {
         try {
           json = await res.json();
         } catch {
-          const msg = "Respuesta inválida del servidor";
-          console.log(`[Servicios] hero fetch error | runId=${runId} | message=${msg}`);
+          console.error("[Servicios] hero: respuesta inválida del servidor");
           return;
         }
         if (!res.ok) {
           const msg = typeof json.error === "string" ? json.error : res.statusText;
-          console.log(`[Servicios] hero fetch error | runId=${runId} | message=${msg}`);
+          console.error("[Servicios] hero: error al cargar contenido", msg);
           return;
         }
         const data = json.data ?? null;
-        console.log(
-          `[Servicios] hero servicios-contenido fetch end | runId=${runId} | rows=${data?.length ?? 0}`
-        );
         if (mounted && data) {
           const map: ContentMap = {};
           for (const item of data) map[item.clave] = item.valor;
@@ -109,7 +100,7 @@ export default function ServiciosHero() {
         const isTimeout =
           err instanceof Error && err.message === "Timeout al consultar servicios-contenido";
         if (isTimeout) {
-          console.log(`[Servicios] hero servicios-contenido timeout | runId=${runId}`);
+          console.error("[Servicios] hero: timeout al consultar servicios-contenido");
         } else {
           console.error("[Servicios] hero Error inesperado:", err);
         }
