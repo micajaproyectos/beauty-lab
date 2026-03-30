@@ -6,6 +6,7 @@ import Footer from "../components/Footer";
 import ProductCardDB from "../components/ProductCardDB";
 import { supabase } from "@/lib/supabaseClient";
 import { checkIsAdmin, checkIsAdminForUser } from "@/lib/checkAdmin";
+import { useAdmin } from "@/app/context/AdminContext";
 import type { DbProduct } from "@/lib/types";
 import { PencilBtn, InlineEditModal, get, type ContentMap, type Field } from "@/app/components/ui/InlineEdit";
 
@@ -696,6 +697,11 @@ function EditProductModal({ product, onClose, onSave, onDelete }: EditModalProps
 const PAGE_SIZE = 25;
 
 export default function ProductsPage() {
+  const { userId: ctxUserId } = useAdmin();
+  const ctxUserIdRef = useRef<string | null>(null);
+  ctxUserIdRef.current = ctxUserId;
+  const loadCatalogInFlightRef = useRef(false);
+
   const [products, setProducts] = useState<DbProduct[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -721,6 +727,7 @@ export default function ProductsPage() {
 
   useEffect(() => {
     let mounted = true;
+    let loadCatalogRunSeq = 0;
 
     function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
       return Promise.race<T>([
@@ -736,38 +743,78 @@ export default function ProductsPage() {
     async function loadCatalog(
       opts?: { silent?: boolean } | { silent?: boolean; authUserId: string | null }
     ) {
-      const silent = opts?.silent ?? false;
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        console.log("[Productos] auth before query", {
-          userId: sessionData.session?.user?.id ?? null,
-          email: sessionData.session?.user?.email ?? null,
-        });
+      const runId = `${Date.now()}-${++loadCatalogRunSeq}`;
+      if (loadCatalogInFlightRef.current) {
+        console.log(`[Productos] loadCatalog skipped | runId=${runId} | reason=in-flight`);
+        return;
+      }
+      loadCatalogInFlightRef.current = true;
 
-        const productosResult = await withTimeout(
-          Promise.resolve(supabase.from("productos").select("*")),
-          15000,
-          "Timeout al consultar productos"
+      const silent = opts?.silent ?? false;
+      const fromAuthCallback = opts != null && "authUserId" in opts;
+      const quickUserId: string | null = fromAuthCallback
+        ? opts.authUserId
+        : ctxUserIdRef.current;
+
+      console.log(`[Productos] loadCatalog start | runId=${runId} | silent=${silent}`);
+      try {
+        console.log(
+          `[Productos] auth before query | userId=${quickUserId ?? "null"} | email=n/a | source=${fromAuthCallback ? "auth-callback" : "admin-context"}`
         );
-        const { data: productos, error } = productosResult as {
+
+        console.log(`[Productos] api fetch start | runId=${runId}`);
+        type ProductosQueryPayload = {
           data: DbProduct[] | null;
           error: { message: string } | null;
         };
 
-        const contenidoHeaderResult = await withTimeout(
-          Promise.resolve(
-            supabase
-              .from("contenido_sitio")
-              .select("clave, valor")
-              .eq("seccion", "productos_header")
-          ),
-          15000,
-          "Timeout al consultar contenido_sitio (productos_header)"
-        );
-        const { data: headerData } = contenidoHeaderResult as {
-          data: { clave: string; valor: string }[] | null;
-          error: { message: string } | null;
-        };
+        let productosResult: ProductosQueryPayload;
+        try {
+          productosResult = (await withTimeout(
+            (async (): Promise<ProductosQueryPayload> => {
+              const res = await fetch("/api/productos", { cache: "no-store" });
+              let json: { data?: DbProduct[] | null; error?: string };
+              try {
+                json = await res.json();
+              } catch {
+                const msg = "Respuesta inválida del servidor";
+                console.log(
+                  `[Productos] api fetch error | runId=${runId} | message=${msg}`
+                );
+                return { data: null, error: { message: msg } };
+              }
+              if (!res.ok) {
+                const msg =
+                  typeof json.error === "string" ? json.error : res.statusText;
+                console.log(
+                  `[Productos] api fetch error | runId=${runId} | message=${msg}`
+                );
+                return { data: null, error: { message: msg } };
+              }
+              const data = json.data ?? null;
+              console.log(
+                `[Productos] api fetch end | runId=${runId} | rows=${data?.length ?? 0}`
+              );
+              return { data, error: null };
+            })(),
+            15000,
+            "Timeout al consultar productos"
+          )) as ProductosQueryPayload;
+        } catch (err) {
+          const isTimeout =
+            err instanceof Error && err.message === "Timeout al consultar productos";
+          if (isTimeout) {
+            console.log(`[Productos] api fetch timeout | runId=${runId}`);
+            productosResult = {
+              data: null,
+              error: { message: "Timeout al consultar productos" },
+            };
+          } else {
+            throw err;
+          }
+        }
+
+        const { data: productos, error } = productosResult;
 
         if (mounted) {
           if (error) {
@@ -775,33 +822,105 @@ export default function ProductsPage() {
           } else {
             setProducts(productos ?? []);
           }
+        }
 
-          if (headerData) {
-            const map: ContentMap = {};
-            for (const item of headerData) map[item.clave] = item.valor;
-            setPhContent(map);
+        console.log(`[Productos] header fetch start | runId=${runId}`);
+
+        let headerJson: { data?: { clave: string; valor: string }[]; error?: string };
+
+        try {
+          const headerRes = await withTimeout(
+            fetch("/api/productos-header", { cache: "no-store" }),
+            15000,
+            "Timeout al consultar productos-header"
+          );
+
+          headerJson = await headerRes.json();
+
+          if (!headerRes.ok) {
+            console.log(
+              `[Productos] header fetch error | runId=${runId} | message=${headerJson.error ?? "unknown"}`
+            );
+          } else {
+            console.log(
+              `[Productos] header fetch end | runId=${runId} | rows=${headerJson.data?.length ?? 0}`
+            );
           }
+        } catch (err) {
+          const isTimeout =
+            err instanceof Error &&
+            err.message === "Timeout al consultar productos-header";
+
+          if (isTimeout) {
+            console.log(`[Productos] header fetch timeout | runId=${runId}`);
+          }
+
+          throw err;
+        }
+
+        const headerData = headerJson?.data ?? [];
+
+        if (mounted && headerData.length > 0) {
+          const map: ContentMap = {};
+          for (const item of headerData) map[item.clave] = item.valor;
+          setPhContent(map);
         }
       } catch (e) {
         console.error("[Productos] Error inesperado:", e);
       } finally {
-        if (mounted && !silent) setLoadingProducts(false);
+        console.log(`[Productos] loadCatalog end | runId=${runId}`);
+        if (!silent) setLoadingProducts(false);
+        loadCatalogInFlightRef.current = false;
       }
 
       if (!mounted) return;
-      const adminStatus =
-        opts && "authUserId" in opts
-          ? await checkIsAdminForUser(opts.authUserId)
-          : await checkIsAdmin();
+
+      let adminUserId: string | null = fromAuthCallback
+        ? opts!.authUserId
+        : ctxUserIdRef.current;
+
+      if (adminUserId === null && !fromAuthCallback) {
+        console.log(`[Productos] getSession start | runId=${runId} | reason=admin-fallback`);
+        try {
+          const getSessionResult = await withTimeout(
+            supabase.auth.getSession(),
+            15000,
+            "Timeout getSession"
+          );
+          const { data: sessionData, error: sessionError } = getSessionResult;
+          if (sessionError) {
+            console.log(
+              `[Productos] getSession error | runId=${runId} | message=${sessionError.message ?? "unknown"}`
+            );
+          }
+          adminUserId = sessionData?.session?.user?.id ?? null;
+          console.log(
+            `[Productos] getSession end | runId=${runId} | hasSession=${!!sessionData?.session} | userId=${adminUserId ?? "null"}`
+          );
+        } catch (getSessionErr) {
+          const isTimeout =
+            getSessionErr instanceof Error && getSessionErr.message === "Timeout getSession";
+          if (isTimeout) {
+            console.log(`[Productos] getSession timeout | runId=${runId}`);
+            console.error("[Productos] getSession timeout (defensive)", runId, getSessionErr);
+          } else {
+            console.error(`[Productos] getSession threw | runId=${runId}`, getSessionErr);
+          }
+        }
+      }
+
+      const adminStatus = await checkIsAdminForUser(adminUserId);
       if (mounted) setIsAdmin(adminStatus);
     }
 
+    console.log("[Productos] loadCatalog trigger | source=mount");
     void loadCatalog();
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
       if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+        console.log("[Productos] loadCatalog trigger | source=auth-change");
         await loadCatalog({ silent: true, authUserId: session?.user?.id ?? null });
         return;
       }
