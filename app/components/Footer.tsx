@@ -172,14 +172,22 @@ export default function Footer() {
           <p className="font-[family-name:var(--font-inter)] text-xs font-light text-[#7A6A6E]">
             © {year} Beauty Lab. Todos los derechos reservados.
           </p>
-          <div className="flex gap-6">
-            <a href="#" className="font-[family-name:var(--font-inter)] text-xs font-light text-[#7A6A6E] transition-colors hover:text-[#B5A8AC]">
-              Política de Privacidad
-            </a>
-            <a href="#" className="font-[family-name:var(--font-inter)] text-xs font-light text-[#7A6A6E] transition-colors hover:text-[#B5A8AC]">
-              Términos y Condiciones
-            </a>
-          </div>
+          <p className="font-[family-name:var(--font-inter)] text-xs font-light text-[#7A6A6E]">
+            Creado por{" "}
+            <span
+              style={{
+                background: "linear-gradient(135deg, #6366f1, #22d3ee)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                fontWeight: 600,
+              }}
+            >
+              AM
+            </span>
+            {" "}
+            <span style={{ color: "#e2e8f0" }}>Tecnología</span>
+          </p>
         </div>
       </div>
 
