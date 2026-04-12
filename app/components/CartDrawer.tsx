@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useCart, type CartItem } from "../context/CartContext";
 
 function formatPrice(price: number): string {
@@ -176,6 +177,7 @@ function ItemRow({
 }
 
 export default function CartDrawer() {
+  const router = useRouter();
   const { items, isOpen, closeCart, removeItem, updateQuantity, totalPrice, clearCart } =
     useCart();
 
@@ -210,6 +212,7 @@ export default function CartDrawer() {
     window.open(url, "_blank");
     clearCart();
     closeCart();
+    router.push("/gracias");
   };
 
   return (
