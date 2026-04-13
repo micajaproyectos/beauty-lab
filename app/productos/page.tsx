@@ -5,7 +5,7 @@ import Link from "next/link";
 import Footer from "../components/Footer";
 import ProductCardDB from "../components/ProductCardDB";
 import { supabase } from "@/lib/supabaseClient";
-import { checkIsAdmin, checkIsAdminForUser } from "@/lib/checkAdmin";
+import { checkIsAdmin } from "@/lib/checkAdmin";
 import { useAdmin } from "@/app/context/AdminContext";
 import type { DbProduct } from "@/lib/types";
 import { PencilBtn, InlineEditModal, get, type ContentMap, type Field } from "@/app/components/ui/InlineEdit";
@@ -738,13 +738,10 @@ function EditProductModal({ product, onClose, onSave, onDelete }: EditModalProps
 const PAGE_SIZE = 25;
 
 export default function ProductsPage() {
-  const { userId: ctxUserId } = useAdmin();
-  const ctxUserIdRef = useRef<string | null>(null);
-  ctxUserIdRef.current = ctxUserId;
+  const { isAdmin } = useAdmin();
   const loadCatalogInFlightRef = useRef(false);
 
   const [products, setProducts] = useState<DbProduct[]>([]);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [editingProduct, setEditingProduct] = useState<DbProduct | null>(null);
   const [creatingProduct, setCreatingProduct] = useState(false);
@@ -768,6 +765,7 @@ export default function ProductsPage() {
 
   useEffect(() => {
     let mounted = true;
+    loadCatalogInFlightRef.current = false;
     function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
       return Promise.race<T>([
         promise,
@@ -779,19 +777,13 @@ export default function ProductsPage() {
 
     /** Productos + hero header. `silent`: sin tocar el spinner (solo login/logout). */
     /** Si viene `authUserId`, no usar getSession (llamada desde onAuthStateChange). */
-    async function loadCatalog(
-      opts?: { silent?: boolean } | { silent?: boolean; authUserId: string | null }
-    ) {
+    async function loadCatalog(opts?: { silent?: boolean }) {
       if (loadCatalogInFlightRef.current) {
         return;
       }
       loadCatalogInFlightRef.current = true;
 
       const silent = opts?.silent ?? false;
-      const fromAuthCallback = opts != null && "authUserId" in opts;
-      const quickUserId: string | null = fromAuthCallback
-        ? opts.authUserId
-        : ctxUserIdRef.current;
 
       try {
         type ProductosQueryPayload = {
@@ -869,62 +861,15 @@ export default function ProductsPage() {
         loadCatalogInFlightRef.current = false;
       }
 
-      if (!mounted) return;
-
-      let adminUserId: string | null = fromAuthCallback
-        ? opts!.authUserId
-        : ctxUserIdRef.current;
-
-      if (adminUserId === null && !fromAuthCallback) {
-        try {
-          const getSessionResult = await withTimeout(
-            supabase.auth.getSession(),
-            15000,
-            "Timeout getSession"
-          );
-          const { data: sessionData, error: sessionError } = getSessionResult;
-          if (sessionError) {
-            console.error(
-              "[Productos] getSession error:",
-              sessionError.message ?? "unknown"
-            );
-          }
-          adminUserId = sessionData?.session?.user?.id ?? null;
-        } catch (getSessionErr) {
-          const isTimeout =
-            getSessionErr instanceof Error && getSessionErr.message === "Timeout getSession";
-          if (isTimeout) {
-            console.error("[Productos] getSession timeout (defensive)", getSessionErr);
-          } else {
-            console.error("[Productos] getSession threw", getSessionErr);
-          }
-        }
-      }
-
-      const adminStatus = await checkIsAdminForUser(adminUserId);
-      if (mounted) setIsAdmin(adminStatus);
     }
 
     void loadCatalog();
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
-
       if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
-        await loadCatalog({ silent: true, authUserId: session?.user?.id ?? null });
-        return;
+        await loadCatalog({ silent: true });
       }
-
-      if (!session) {
-        setIsAdmin(false);
-        return;
-      }
-      const { data } = await supabase
-        .from("admins")
-        .select("user_id")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-      if (mounted) setIsAdmin(!!data);
     });
 
     return () => {
@@ -1054,7 +999,7 @@ export default function ProductsPage() {
                   <em className="text-[#E8C9C1]">{pg("ph_titulo_em")}</em>
                 </h1>
                 <p className="mt-4 font-[family-name:var(--font-inter)] text-xs font-medium tracking-[0.12em] text-[#B8954A] drop-shadow-[0_0_20px_rgba(201,169,110,0.35)] sm:text-sm">
-                  Sobre $35.000 envío gratis.
+                  Sobre $100.000 envío gratis.
                 </p>
               </div>
               <p className="max-w-sm font-[family-name:var(--font-inter)] text-sm font-light leading-relaxed text-[#E8C9C1]/70">

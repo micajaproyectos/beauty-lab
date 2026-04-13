@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAdmin } from "@/app/context/AdminContext";
 import { PencilBtn, InlineEditModal, get, type ContentMap, type Field } from "@/app/components/ui/InlineEdit";
 
-const DEFAULTS: ContentMap = {
+export const HERO_DEFAULTS: ContentMap = {
   hero_eyebrow:        "Estética Facial Premium",
-  hero_titulo:         "Tu ritual de belleza, redefinido.",
+  hero_titulo:         "",
   hero_descripcion:    "Ciencia y naturaleza en perfecta armonía. Tratamientos personalizados diseñados para revelar la mejor versión de tu piel.",
   hero_stat1_valor:    "500+",
   hero_stat1_label:    "Clientas felices",
@@ -21,27 +21,14 @@ const DEFAULTS: ContentMap = {
 
 type EditingSection = "eyebrow" | "titulo" | "descripcion" | "stats" | "imagen_texto" | "disponibilidad" | null;
 
-export default function Hero() {
-  const [content, setContent] = useState<ContentMap>(DEFAULTS);
+interface HeroProps {
+  initialContent: ContentMap;
+}
+
+export default function Hero({ initialContent }: HeroProps) {
+  const [content, setContent] = useState<ContentMap>(initialContent);
   const { isAdmin } = useAdmin();
   const [editing, setEditing] = useState<EditingSection>(null);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function load() {
-      const { data } = await supabase.from("contenido_sitio").select("clave, valor").eq("seccion", "hero");
-      if (!mounted) return;
-      if (data) {
-        const map: ContentMap = {};
-        for (const item of data) map[item.clave] = item.valor;
-        setContent({ ...DEFAULTS, ...map });
-      }
-    }
-
-    load();
-    return () => { mounted = false; };
-  }, []);
 
   async function saveFields(updates: ContentMap) {
     const entries = Object.entries(updates);
@@ -56,7 +43,7 @@ export default function Hero() {
     setContent((prev) => ({ ...prev, ...updates }));
   }
 
-  const g = (key: string) => get(content, key, DEFAULTS);
+  const g = (key: string) => get(content, key, HERO_DEFAULTS);
 
   const MODALS: Record<NonNullable<EditingSection>, { title: string; fields: Field[] }> = {
     eyebrow:      { title: "Texto destacado",    fields: [{ key: "hero_eyebrow",        label: "Eyebrow" }] },
@@ -131,7 +118,6 @@ export default function Hero() {
 
       {/* ── Floating sparkles ────────────────────────────────────────── */}
       <div className="pointer-events-none absolute inset-0 z-[2] overflow-hidden">
-        {/* Sparkle SVG helper */}
         {([
           { x: "18%",  y: "22%", size: 10, delay: "0s",    cls: "hero-sparkle" },
           { x: "78%",  y: "18%", size: 7,  delay: "1.1s",  cls: "hero-sparkle" },
@@ -155,8 +141,7 @@ export default function Hero() {
         <div className="flex flex-1 flex-col items-center text-center lg:items-start lg:text-left">
 
           {/* Eyebrow */}
-          <div className="mb-6 flex items-center gap-2">
-            {/* Decorative dash */}
+          <div className="mb-4 flex items-center gap-2">
             <span className="hidden h-px w-8 bg-[#C9A96E] lg:block" />
             <span className="inline-block font-[family-name:var(--font-inter)] text-xs font-medium tracking-[0.35em] text-[#C9A96E] uppercase">
               {g("hero_eyebrow")}
@@ -164,9 +149,35 @@ export default function Hero() {
             {isAdmin && <PencilBtn onClick={() => setEditing("eyebrow")} />}
           </div>
 
+          {/* Prueba social */}
+          <div className="mb-6 flex items-center gap-6">
+            {[
+              { val: g("hero_stat1_valor"), lbl: g("hero_stat1_label") },
+              { val: g("hero_stat2_valor"), lbl: g("hero_stat2_label") },
+              { val: g("hero_stat3_valor"), lbl: g("hero_stat3_label") },
+            ].map(({ val, lbl }, i) => (
+              <div key={lbl} className="flex items-center gap-6">
+                {i > 0 && (
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="h-3 w-px bg-[#E8C9C1]" />
+                    <svg width="5" height="5" viewBox="0 0 12 12" fill="#C9A96E" opacity="0.5" aria-hidden="true">
+                      <path d="M6 0L6.8 5.2L12 6L6.8 6.8L6 12L5.2 6.8L0 6L5.2 5.2L6 0Z" />
+                    </svg>
+                    <div className="h-3 w-px bg-[#E8C9C1]" />
+                  </div>
+                )}
+                <div className="text-center">
+                  <p className="font-[family-name:var(--font-cormorant)] text-3xl font-light text-[#5C3A48]">{val}</p>
+                  <p className="font-[family-name:var(--font-inter)] text-xs font-light tracking-wider text-[#7A6A6E]">{lbl}</p>
+                </div>
+              </div>
+            ))}
+            {isAdmin && <PencilBtn onClick={() => setEditing("stats")} />}
+          </div>
+
           {/* Título */}
-          <div className="mb-4 flex items-start gap-2">
-            <h1 className="font-[family-name:var(--font-cormorant)] text-5xl font-light leading-[1.08] text-[#2C2329] sm:text-6xl lg:text-7xl xl:text-[82px]">
+          <div className="mb-4 flex items-start gap-2 w-full">
+            <h1 className="w-full break-words font-[family-name:var(--font-cormorant)] text-5xl font-light leading-[1.08] text-[#2C2329] sm:text-6xl lg:text-7xl xl:text-[82px]">
               {g("hero_titulo")}
             </h1>
             {isAdmin && <PencilBtn onClick={() => setEditing("titulo")} />}
@@ -193,7 +204,7 @@ export default function Hero() {
           <div className="flex flex-wrap items-center gap-4">
             <a href="/servicios"
               className="group relative overflow-hidden rounded-full bg-[#5C3A48] px-8 py-3.5 font-[family-name:var(--font-inter)] text-sm font-medium tracking-widest text-[#FAF8F5] uppercase shadow-[0_8px_32px_rgba(92,58,72,0.3)] transition-all hover:bg-[#2C2329] hover:shadow-[0_12px_40px_rgba(92,58,72,0.4)]">
-              <span className="relative z-10">Ver Tratamientos</span>
+              <span className="relative z-10">Agenda tu diagnóstico GRATIS</span>
               <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
             </a>
             <a href="/productos"
@@ -204,35 +215,10 @@ export default function Hero() {
               </svg>
             </a>
             <p className="w-full text-center font-[family-name:var(--font-inter)] text-xs font-medium tracking-[0.12em] text-[#B8954A] drop-shadow-[0_0_20px_rgba(201,169,110,0.35)] sm:text-sm lg:text-left">
-              Sobre $35.000 envío gratis.
+              Sobre $100.000 envío gratis.
             </p>
           </div>
 
-          {/* Stats */}
-          <div className="mt-12 flex items-center gap-6 border-t border-[#E8C9C1] pt-8">
-            {[
-              { val: g("hero_stat1_valor"), lbl: g("hero_stat1_label") },
-              { val: g("hero_stat2_valor"), lbl: g("hero_stat2_label") },
-              { val: g("hero_stat3_valor"), lbl: g("hero_stat3_label") },
-            ].map(({ val, lbl }, i) => (
-              <div key={lbl} className="flex items-center gap-6">
-                {i > 0 && (
-                  <div className="flex flex-col items-center gap-1">
-                    <div className="h-3 w-px bg-[#E8C9C1]" />
-                    <svg width="5" height="5" viewBox="0 0 12 12" fill="#C9A96E" opacity="0.5" aria-hidden="true">
-                      <path d="M6 0L6.8 5.2L12 6L6.8 6.8L6 12L5.2 6.8L0 6L5.2 5.2L6 0Z" />
-                    </svg>
-                    <div className="h-3 w-px bg-[#E8C9C1]" />
-                  </div>
-                )}
-                <div className="text-center">
-                  <p className="font-[family-name:var(--font-cormorant)] text-3xl font-light text-[#5C3A48]">{val}</p>
-                  <p className="font-[family-name:var(--font-inter)] text-xs font-light tracking-wider text-[#7A6A6E]">{lbl}</p>
-                </div>
-              </div>
-            ))}
-            {isAdmin && <PencilBtn onClick={() => setEditing("stats")} />}
-          </div>
         </div>
 
         {/* Right: Visual */}
@@ -249,7 +235,6 @@ export default function Hero() {
 
             {/* Main card */}
             <div className="absolute inset-0 overflow-hidden rounded-[40px] bg-gradient-to-br from-[#E8C9C1] via-[#D4A5A0] to-[#8B5E6D] shadow-[0_32px_80px_rgba(92,58,72,0.25)]">
-              {/* Video de fondo de la tarjeta */}
               <video
                 className="absolute inset-0 h-full w-full object-cover"
                 autoPlay
@@ -260,7 +245,6 @@ export default function Hero() {
                 aria-hidden
                 src="/videos/hero_tarjeta.mp4"
               />
-              {/* Subtle gradient overlay always on top of video */}
               <div className="absolute inset-0 bg-gradient-to-t from-[#2C2329]/50 via-transparent to-[#5C3A48]/10 rounded-[40px]" />
 
               {/* Imagen texto */}
@@ -295,8 +279,12 @@ export default function Hero() {
             </div>
 
             {/* Floating availability badge */}
-            <div className="hero-float absolute -bottom-6 -left-6 flex items-center gap-1 rounded-2xl bg-[#FAF8F5] px-4 py-2.5 shadow-[0_16px_48px_rgba(92,58,72,0.15)] ring-1 ring-[#E8C9C1]/60">
-              <p className="font-[family-name:var(--font-cormorant)] text-lg font-medium text-[#5C3A48]">
+            <div className="hero-float absolute -bottom-6 -left-6 flex items-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#FFF3E0] to-[#FFF8F0] px-4 py-2.5 shadow-[0_16px_48px_rgba(201,120,30,0.25)] ring-1 ring-[#E8A040]/40">
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#E8600A] opacity-60" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#E8600A]" />
+              </span>
+              <p className="font-[family-name:var(--font-cormorant)] text-lg font-semibold text-[#B84800]">
                 {g("hero_disponibilidad")}
               </p>
               {isAdmin && <PencilBtn onClick={() => setEditing("disponibilidad")} />}
@@ -310,7 +298,7 @@ export default function Hero() {
               </p>
             </div>
 
-            {/* Small floating sparkle near card */}
+            {/* Small floating sparkles near card */}
             <div className="hero-sparkle absolute top-[12%] -left-7" style={{ animationDelay: "1.4s" }}>
               <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
                 <path d="M6 0L6.8 5.2L12 6L6.8 6.8L6 12L5.2 6.8L0 6L5.2 5.2L6 0Z" fill="#C9A96E" opacity="0.6" />
@@ -338,7 +326,7 @@ export default function Hero() {
         <InlineEditModal
           {...MODALS[editing]}
           content={content}
-          defaults={DEFAULTS}
+          defaults={HERO_DEFAULTS}
           onClose={() => setEditing(null)}
           onSave={saveFields}
         />

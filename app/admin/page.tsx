@@ -1,41 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
-import type { User } from "@supabase/supabase-js";
+import { useAdmin } from "@/app/context/AdminContext";
 
 // ─── Admin Page ───────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { isAdmin, loading, userEmail } = useAdmin();
 
   useEffect(() => {
-    async function checkSession() {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        router.replace("/login");
-        return;
-      }
-      setUser(data.session.user);
-      setLoading(false);
+    if (!loading && !isAdmin) {
+      router.replace("/login");
     }
-
-    checkSession();
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        router.replace("/login");
-      } else {
-        setUser(session.user);
-      }
-    });
-
-    return () => listener.subscription.unsubscribe();
-  }, [router]);
+  }, [isAdmin, loading, router]);
 
   async function handleSignOut() {
     // scope: 'global' invalida el token también en el servidor de Supabase,
@@ -92,7 +73,7 @@ export default function AdminPage() {
           <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: "#34d399" }} />
           <p className="text-sm" style={{ color: "var(--warm-muted)" }}>
             Sesión activa como{" "}
-            <span style={{ color: "var(--warm-dark)", fontWeight: 500 }}>{user?.email}</span>
+            <span style={{ color: "var(--warm-dark)", fontWeight: 500 }}>{userEmail}</span>
           </p>
         </div>
 
