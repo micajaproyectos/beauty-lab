@@ -26,17 +26,19 @@ const MODALS: Record<"brand", { title: string; fields: Field[] }> = {
 
 const footerLinks: Record<string, { label: string; href: string }[]> = {
   Tratamientos: [
-    { label: "Toxina Botulínica",    href: "/servicios" },
-    { label: "Ácido Hialurónico",    href: "/servicios" },
-    { label: "Bioestimulación",      href: "/servicios" },
-    { label: "Hilos Tensores",       href: "/servicios" },
-    { label: "Hilos Revitalizantes", href: "/servicios" },
-    { label: "SkinCoach",            href: "/servicios" },
+    { label: "Rejuvenecimiento Facial", href: "/rejuvenecimiento-facial" },
+    { label: "Lifting Facial",          href: "/lifting-facial" },
+    { label: "Toxina Botulínica",       href: "/toxina-botulinica" },
+    { label: "Ácido Hialurónico",       href: "/acido-hialuronico" },
+    { label: "Bioestimulación",         href: "/bioestimulacion" },
+    { label: "Hilos Tensores",          href: "/lifting-facial" },
+    { label: "Hilos Revitalizantes",    href: "/hilos-revitalizantes" },
+    { label: "SkinCoach",               href: "/skincoach" },
   ],
   "K-Beauty": [
-    { label: "Protección Solar", href: "/productos" },
-    { label: "Hidratantes",      href: "/productos" },
-    { label: "Tratamientos",     href: "/productos" },
+    { label: "Dermocosmética Coreana", href: "/dermocosmetica-coreana" },
+    { label: "Protección Solar",       href: "/proteccion-solar" },
+    { label: "Hidratantes",            href: "/hidratantes" },
   ],
   Nosotras: [
     { label: "Quiénes somos",   href: "/#nosotras" },
