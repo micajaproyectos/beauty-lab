@@ -409,8 +409,16 @@ export default function Nosotras() {
 
                   {cert.imagen && (
                     <div className="pointer-events-none absolute -top-2 right-4 z-50 w-72 overflow-hidden rounded-2xl border border-[#E8C9C1] bg-white opacity-0 shadow-2xl transition-all duration-300 group-hover:opacity-100 group-hover:-translate-y-2">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={cert.imagen} alt={cert.title} className="w-full h-auto" />
+                      <div className="relative w-full aspect-[4/3]">
+                        <Image
+                          src={cert.imagen}
+                          alt={cert.title}
+                          fill
+                          sizes="288px"
+                          className="object-contain"
+                          loading="lazy"
+                        />
+                      </div>
                       <p className="border-t border-[#E8C9C1] px-3 py-2 text-center font-[family-name:var(--font-inter)] text-[10px] font-light text-[#B5A8AC]">
                         {cert.title}
                       </p>
