@@ -45,9 +45,9 @@ export default function RootLayout({
         {/* Google tag (gtag.js) — carga GA4 + Google Ads con un solo script */}
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`}
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
-        <Script id="gtag-init" strategy="afterInteractive">
+        <Script id="gtag-init" strategy="lazyOnload">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}

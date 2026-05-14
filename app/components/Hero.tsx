@@ -241,7 +241,7 @@ export default function Hero({ initialContent }: HeroProps) {
                 muted
                 loop
                 playsInline
-                preload="auto"
+                preload="none"
                 aria-hidden
                 src="/videos/hero_tarjeta.mp4"
               />
