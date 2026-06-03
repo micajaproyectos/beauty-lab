@@ -33,6 +33,7 @@ const footerLinks: Record<string, { label: string; href: string }[]> = {
     { label: "Bioestimulación",         href: "/bioestimulacion" },
     { label: "Hilos Tensores",          href: "/lifting-facial" },
     { label: "Hilos Revitalizantes",    href: "/hilos-revitalizantes" },
+    { label: "Limpieza Facial",          href: "/limpieza-facial" },
     { label: "SkinCoach",               href: "/skincoach" },
   ],
   "K-Beauty": [
