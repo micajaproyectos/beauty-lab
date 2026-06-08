@@ -183,7 +183,7 @@ export default function CTA() {
             className="group relative flex flex-col overflow-hidden rounded-3xl border border-[#E8C9C1]/60 bg-white p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_48px_rgba(37,211,102,0.15)]"
             onClick={() => {
               if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
-                (window as any).gtag("event", "conversion", { send_to: "AW-18082765966/JcyqCOewwpocEl65xK5D" });
+                (window as any).gtag("event", "conversion", { send_to: "AW-18082765966/JBPHCMmbprscEI65xK5D" });
               }
             }}
           >
