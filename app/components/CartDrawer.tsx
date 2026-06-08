@@ -208,6 +208,9 @@ export default function CartDrawer() {
 
   const handleSend = () => {
     if (items.length === 0) return;
+    if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
+      (window as any).gtag("event", "conversion", { send_to: "AW-18082765966/JcyqCOewwpocEl65xK5D" });
+    }
     const url = buildWhatsAppUrl(items, totalPrice);
     window.open(url, "_blank");
     clearCart();

@@ -40,6 +40,11 @@ export default function WhatsAppButton() {
         aria-label="Contactar por WhatsApp"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
+        onClick={() => {
+          if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
+            (window as any).gtag("event", "conversion", { send_to: "AW-18082765966/JcyqCOewwpocEl65xK5D" });
+          }
+        }}
         className="flex items-center justify-center w-14 h-14 rounded-full shadow-xl transition-transform duration-200 hover:scale-110 active:scale-95"
         style={{
           background: "linear-gradient(135deg, var(--mauve) 0%, var(--deep-mauve) 100%)",

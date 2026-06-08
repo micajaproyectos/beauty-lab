@@ -7,7 +7,7 @@ import { PencilBtn, InlineEditModal, get, type ContentMap, type Field } from "@/
 
 const DEFAULTS: ContentMap = {
   footer_tagline:  "Ciencia al servicio del cuidado de tu piel. Estética facial premium online.",
-  footer_ubicacion:"Santiago, Chile",
+  footer_ubicacion:"Av. El Bosque Nte. 0226, dpto. 302, Las Condes, Santiago",
   footer_ig_url:   "https://www.instagram.com/beauty.lab.esteticafacial/",
   footer_wa_url:   "https://wa.me/56933987534",
 };
