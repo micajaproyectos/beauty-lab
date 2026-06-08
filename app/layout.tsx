@@ -4,12 +4,8 @@ import Script from "next/script";
 import "./globals.css";
 import Providers from "./components/Providers";
 
-// ─── REEMPLAZA ESTOS IDs CON LOS TUYOS ───────────────────────────────────────
-// GA4 Measurement ID → lo encontrás en Google Analytics → Admin → Data Streams
-// Google Ads ID      → lo encontrás en Google Ads → Herramientas → Etiqueta de Google
-const GA4_ID = "G-XXXXXXXXXX";       // ← reemplazar cuando tengas GA4
+const GA4_ID = "G-FXBYJSLEQG";
 const GADS_ID = "AW-18082765966";
-// ─────────────────────────────────────────────────────────────────────────────
 
 export { GA4_ID, GADS_ID };
 
