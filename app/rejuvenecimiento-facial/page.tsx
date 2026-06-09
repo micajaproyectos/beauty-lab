@@ -273,6 +273,34 @@ export default function RejuvenecimientoFacialPage() {
           </div>
         </section>
 
+        {/* Link interno → landing Santiago */}
+        <section className="bg-white py-12 lg:py-16">
+          <div className="mx-auto max-w-7xl px-6 lg:px-12">
+            <Link
+              href="/rejuvenecimiento-facial-santiago"
+              className="group flex flex-col gap-4 rounded-3xl border border-[#E8C9C1]/60 bg-[#FAF8F5] p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_48px_rgba(92,58,72,0.1)] sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div>
+                <span className="inline-block font-[family-name:var(--font-inter)] text-xs font-medium tracking-[0.3em] text-[#C9A96E] uppercase mb-2">
+                  Las Condes · Santiago
+                </span>
+                <p className="font-[family-name:var(--font-cormorant)] text-2xl font-light text-[#2C2329] lg:text-3xl">
+                  ¿Buscas rejuvenecimiento facial <em className="text-[#5C3A48]">en Santiago?</em>
+                </p>
+                <p className="mt-2 font-[family-name:var(--font-inter)] text-sm font-light text-[#7A6A6E]">
+                  Conoce nuestra clínica en Av. El Bosque Nte. 0226, dpto. 302, Las Condes.
+                </p>
+              </div>
+              <div className="flex flex-shrink-0 items-center gap-2 font-[family-name:var(--font-inter)] text-sm font-medium tracking-widest text-[#5C3A48] uppercase">
+                Ver tratamientos
+                <svg className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
+                </svg>
+              </div>
+            </Link>
+          </div>
+        </section>
+
         <CTA />
       </main>
       <Footer />
