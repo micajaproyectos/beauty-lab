@@ -38,10 +38,17 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       const uid = sessionError || !sessionData.session ? null : sessionData.session.user.id;
       const email = sessionData.session?.user?.email ?? null;
-      const result = await computeIsAdmin(uid, email);
+      const result = await Promise.race([
+        computeIsAdmin(uid, email),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("timeout")), 8_000)
+        ),
+      ]);
       setIsAdmin(result.isAdmin);
       setUserId(result.userId);
       setUserEmail(result.userEmail);
+    } catch {
+      // Error o timeout: liberar loading, isAdmin queda como false
     } finally {
       setLoading(false);
     }
@@ -50,16 +57,26 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
+    // Si getSession() o computeIsAdmin() cuelgan (Supabase degradado),
+    // liberar loading después de 10s para evitar pantalla infinita.
+    const safetyTimer = setTimeout(() => { if (mounted) setLoading(false); }, 10_000);
+
     (async () => {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      const uid = sessionError || !sessionData.session ? null : sessionData.session.user.id;
-      const email = sessionData.session?.user?.email ?? null;
-      const result = await computeIsAdmin(uid, email);
-      if (!mounted) return;
-      setIsAdmin(result.isAdmin);
-      setUserId(result.userId);
-      setUserEmail(result.userEmail);
-      setLoading(false);
+      try {
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        const uid = sessionError || !sessionData.session ? null : sessionData.session.user.id;
+        const email = sessionData.session?.user?.email ?? null;
+        const result = await computeIsAdmin(uid, email);
+        if (!mounted) return;
+        setIsAdmin(result.isAdmin);
+        setUserId(result.userId);
+        setUserEmail(result.userEmail);
+      } catch {
+        // Error de red: tratar como no admin
+      } finally {
+        clearTimeout(safetyTimer);
+        if (mounted) setLoading(false);
+      }
     })();
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -88,6 +105,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
+      clearTimeout(safetyTimer);
       listener.subscription.unsubscribe();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };

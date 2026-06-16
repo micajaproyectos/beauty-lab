@@ -181,21 +181,25 @@ function CreateProductModal({
       const imagen_url = uploadJson.url;
 
       console.log("[CreateProductModal] 5) antes de insert", { imagen_url });
-      const { data, error: insertError } = await supabase
-        .from("productos")
-        .insert({
-          nombre: nombre.trim(),
-          "descripción": descripcion.trim(),
-          precio: Number(precio),
-          categoria: categoria.trim(),
-          stock: 0,
-          imagen_url,
-          activo: true,
-          badge: badge.trim(),
-          tipo_piel: tipoPiel,
-        })
-        .select()
-        .single();
+      const { data, error: insertError } = await withTimeout(
+        supabase
+          .from("productos")
+          .insert({
+            nombre: nombre.trim(),
+            "descripción": descripcion.trim(),
+            precio: Number(precio),
+            categoria: categoria.trim(),
+            stock: 0,
+            imagen_url,
+            activo: true,
+            badge: badge.trim(),
+            tipo_piel: tipoPiel,
+          })
+          .select()
+          .single() as unknown as Promise<{ data: DbProduct | null; error: { message: string } | null }>,
+        10_000,
+        "Tiempo de espera al guardar. Intenta nuevamente."
+      );
 
       console.log("[CreateProductModal] 6) despues de insert", { data, insertError });
 
@@ -214,7 +218,7 @@ function CreateProductModal({
       onCreated(data as DbProduct);
     } catch (err) {
       console.error("[CreateModal]", err);
-      setError("Ocurrió un error inesperado.");
+      setError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
     } finally {
       console.log("[CreateProductModal] 7) finally setLoading false");
       setLoading(false);
