@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAdmin } from "@/app/context/AdminContext";
+import { useAgendar } from "@/app/context/AgendarContext";
 import { PencilBtn, InlineEditModal, get, type ContentMap, type Field } from "@/app/components/ui/InlineEdit";
 
 const DEFAULTS: ContentMap = {
@@ -53,6 +54,7 @@ const MODALS: Record<NonNullable<EditingSection>, { title: string; fields: Field
 export default function CTA() {
   const [content, setContent] = useState<ContentMap>(DEFAULTS);
   const { isAdmin } = useAdmin();
+  const { openAgendar } = useAgendar();
   const [editing, setEditing] = useState<EditingSection>(null);
 
   useEffect(() => {
@@ -80,8 +82,6 @@ export default function CTA() {
   }
 
   const g = (key: string) => get(content, key, DEFAULTS);
-
-  const waUrl = `https://wa.me/${g("cta_wa_numero")}?text=${encodeURIComponent(g("cta_wa_mensaje"))}`;
 
   return (
     <section id="cta" className="relative overflow-hidden bg-[#FAF8F5] py-12 lg:py-16">
@@ -176,16 +176,17 @@ export default function CTA() {
           </a>
 
           {/* WhatsApp card */}
-          <a
-            href={waUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group relative flex flex-col overflow-hidden rounded-3xl border border-[#E8C9C1]/60 bg-white p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_48px_rgba(37,211,102,0.15)]"
-            onClick={() => {
-              if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
-                (window as any).gtag("event", "conversion", { send_to: "AW-18082765966/JBPHCMmbprscEI65xK5D" });
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={openAgendar}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                openAgendar();
               }
             }}
+            className="group relative flex cursor-pointer flex-col overflow-hidden rounded-3xl border border-[#E8C9C1]/60 bg-white p-8 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_48px_rgba(37,211,102,0.15)]"
           >
             <div className="mb-6 flex items-center justify-between">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#25D366]">
@@ -231,7 +232,7 @@ export default function CTA() {
                 Escribir ahora
               </div>
             </div>
-          </a>
+          </div>
         </div>
 
         {/* Reassurance */}

@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-
-const PHONE = "56933987534";
-const WA_URL = `https://wa.me/${PHONE}`;
+import { useAgendar } from "../context/AgendarContext";
 
 export default function WhatsAppButton() {
   const [hovered, setHovered] = useState(false);
+  const { openAgendar } = useAgendar();
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
@@ -33,18 +32,12 @@ export default function WhatsAppButton() {
       </div>
 
       {/* Botón flotante */}
-      <a
-        href={WA_URL}
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
+        type="button"
         aria-label="Contactar por WhatsApp"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        onClick={() => {
-          if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
-            (window as any).gtag("event", "conversion", { send_to: "AW-18082765966/JBPHCMmbprscEI65xK5D" });
-          }
-        }}
+        onClick={openAgendar}
         className="flex items-center justify-center w-14 h-14 rounded-full shadow-xl transition-transform duration-200 hover:scale-110 active:scale-95"
         style={{
           background: "linear-gradient(135deg, var(--mauve) 0%, var(--deep-mauve) 100%)",
@@ -75,7 +68,7 @@ export default function WhatsAppButton() {
             fill="var(--cream)"
           />
         </svg>
-      </a>
+      </button>
     </div>
   );
 }

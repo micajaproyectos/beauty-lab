@@ -1,6 +1,7 @@
 "use client";
 
 import { CartProvider } from "../context/CartContext";
+import { AgendarProvider } from "../context/AgendarContext";
 import CartDrawer from "./CartDrawer";
 import Navbar from "./Navbar";
 import { AdminProvider } from "../context/AdminContext";
@@ -12,10 +13,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <AdminProvider>
       <AuthSessionDebugListener />
       <CartProvider>
-        <Navbar />
-        {children}
-        <CartDrawer />
-        <WhatsAppButton />
+        <AgendarProvider>
+          <Navbar />
+          {children}
+          <CartDrawer />
+          <WhatsAppButton />
+        </AgendarProvider>
       </CartProvider>
     </AdminProvider>
   );

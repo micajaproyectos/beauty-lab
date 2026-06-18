@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useCart, type CartItem } from "../context/CartContext";
 
 function formatPrice(price: number): string {
@@ -177,7 +176,6 @@ function ItemRow({
 }
 
 export default function CartDrawer() {
-  const router = useRouter();
   const { items, isOpen, closeCart, removeItem, updateQuantity, totalPrice, clearCart } =
     useCart();
 
@@ -208,14 +206,10 @@ export default function CartDrawer() {
 
   const handleSend = () => {
     if (items.length === 0) return;
-    if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
-      (window as any).gtag("event", "conversion", { send_to: "AW-18082765966/JBPHCMmbprscEI65xK5D" });
-    }
     const url = buildWhatsAppUrl(items, totalPrice);
     window.open(url, "_blank");
     clearCart();
     closeCart();
-    router.push("/gracias");
   };
 
   return (
