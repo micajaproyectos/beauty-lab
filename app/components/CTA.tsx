@@ -14,9 +14,7 @@ const DEFAULTS: ContentMap = {
   cta_ig_handle:        "@beauty.lab.esteticafacial",
   cta_ig_bio:           "Estética facial premium · Dermocosmética Coreana 🌸\nDra. Solange Ballen Marín · Master Inyector",
   cta_ig_prompt:        "Síguenos para ver tratamientos, resultados y tips de skincare diario.",
-  cta_wa_numero:        "56933987534",
   cta_wa_numero_display:"+56 9 3398 7534",
-  cta_wa_mensaje:       "Hola! Me gustaría obtener más información sobre sus tratamientos y productos.",
   cta_wa_descripcion:   "Escríbenos para agendar tu consulta, cotizar un tratamiento o resolver cualquier duda. Te respondemos a la brevedad.",
 };
 
@@ -43,9 +41,7 @@ const MODALS: Record<NonNullable<EditingSection>, { title: string; fields: Field
   whatsapp: {
     title: "Card — WhatsApp",
     fields: [
-      { key: "cta_wa_numero",         label: "Número (para link wa.me)",  hint: "Solo dígitos, ej: 56933987534" },
       { key: "cta_wa_numero_display", label: "Número (visible en pantalla)", hint: "Ej: +56 9 3398 7534" },
-      { key: "cta_wa_mensaje",        label: "Mensaje pre-cargado",       multiline: true },
       { key: "cta_wa_descripcion",    label: "Descripción de la card",    multiline: true },
     ],
   },

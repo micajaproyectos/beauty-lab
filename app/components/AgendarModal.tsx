@@ -44,8 +44,11 @@ export default function AgendarModal({ onClose }: { onClose: () => void }) {
     if (!isValid) return;
 
     // 1) Disparo de conversión (una sola vez, antes de abrir WhatsApp).
-    if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
-      (window as any).gtag("event", "conversion", { send_to: CONVERSION_SEND_TO });
+    const w = window as unknown as {
+      gtag?: (command: string, action: string, params: Record<string, unknown>) => void;
+    };
+    if (typeof w.gtag === "function") {
+      w.gtag("event", "conversion", { send_to: CONVERSION_SEND_TO });
     }
 
     // 2) Abrir WhatsApp con el mensaje pre-rellenado.
